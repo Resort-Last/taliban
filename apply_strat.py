@@ -29,5 +29,6 @@ def strategy(df):
     df.loc[(df['RSI_14'] > 80), 'RSI_calc'] = 1
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == -1), 'RSI_exit'] = 'BUY'
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == 1), 'RSI_exit'] = 'SELL'
+    print(f"{df.iloc[-1]['ichi_entry']} {df.iloc[-1]['RSI_exit']} - 'dingdong, returning pong.")
     return df.iloc[-1]['ichi_entry'], df.iloc[-1]['RSI_exit']
 

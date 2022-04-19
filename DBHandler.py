@@ -31,3 +31,7 @@ class DBHandler(object):
     def fill_db(self, df):
         df.to_sql(self.table, self.conn, if_exists='append', index=False)
 
+
+#   SYMBOL = 'BTCUSDT'
+#   db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
+#   print(db_obj.query_main())

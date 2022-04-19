@@ -14,6 +14,9 @@ btc_price = {'error': False}
 client = Client(environ.get("binance_key"), environ.get("binance_secret"))
 db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
 
+# PROBABLY THE APPLY STRAT IS SLOWING DOWN THE PROCESS AND DUE TO THIS, IT IS SKIPPING KLINES. I HAVE TO SEPERATE THE 2 THINGS AND RUN THEM SEPERATELY
+# HAVE THE STREAM RUN IN A DIFFERENT PS SCRIPT TO UPDATE DB, AND USE THE Client to enter or exit positions.
+
 
 def btc_trade_history(msg):
     """ define how to process incoming WebSocket messages """
@@ -118,16 +121,18 @@ def btc_futures_handler(msg):
         cleaned_msg = msg["k"]
         cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol | ps for some reason)
         a = create_frame(cleaned_msg)
-        df = db_obj.query_main()
-        df = df.append(a)
-        df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
-        _entry, _exit = strategy(df)
-        if _entry != 'nan' or _exit != 'nan':
-            print(f'entry:{_entry}, exit:{_exit}')
-            # STRAT GOES HERE IF BUY / SELL WHATEVER
+        #   df = db_obj.query_main()
+        #   df = df.append(a)
+        #   df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
+        #   _entry, _exit = strategy(df)
+        #   if not pd.isna(_entry) or not pd.isna(_exit):
+        #       print(f'entry:{_entry}, exit:{_exit}')
+        #       # STRAT GOES HERE IF BUY / SELL WHATEVER
         if bool(cleaned_msg["x"]):  # If candle is closed, append it to the DB.
             print(a)
             db_obj.fill_db(a)
+        elif not bool(cleaned_msg["x"]):
+            pass
     else:
         btc_price['error'] = True
 
