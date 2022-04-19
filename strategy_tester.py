@@ -41,7 +41,7 @@ def backtester(df):
 if __name__ == '__main__':
     # TODO: RSI exit where it changes from below 30 to above / 70 to below.
     # df = create_frame()
-    with open('historical_data.pkl', 'rb') as f:
+    with open('data/historical_data.pkl', 'rb') as f:
         df = pickle.load(f)
     df.ta.strategy(StrategyOne)
     df = df.dropna(0)

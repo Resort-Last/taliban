@@ -64,7 +64,7 @@ reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_mean_absolute_erro
                                                  verbose=1)
 
 model_checkpoint = tf.keras.callbacks.ModelCheckpoint(monitor='val_mean_absolute_error',
-                                                      filepath='./model-best.h5',
+                                                      filepath='model-best.h5',
                                                       save_best_only=True)
 
 callbacks = [
