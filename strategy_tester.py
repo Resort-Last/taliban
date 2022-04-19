@@ -1,6 +1,6 @@
 import pandas as pd
 import pandas_ta as ta
-from binance_con import create_frame
+from get_historical_klines import create_frame
 from matplotlib import pyplot as plt
 import pickle
 

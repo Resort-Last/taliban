@@ -1,6 +1,6 @@
-from db_checker import db_checker, trunc_db
+from DBHandler import DBHandler
 import pandas as pd
-import pandas_ta as ta
+from get_historical_klines import historical_futures_klines
 from os import environ
 from binance import ThreadedWebsocketManager
 from binance.client import Client
@@ -11,6 +11,7 @@ SYMBOL = 'BTCUSDT'
 INTERVAL = '1m'
 btc_price = {'error': False}
 client = Client(environ.get("binance_key"), environ.get("binance_secret"))
+db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
 
 
 def btc_trade_history(msg):
@@ -117,11 +118,11 @@ def btc_futures_handler(msg):
         cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol / ps for some reason)
         a = create_frame(cleaned_msg)
         if bool(cleaned_msg["x"]):
-            print('Closed, new entry should be created in DB')
             print(a)
+            db_obj.fill_db(a)
+            print(len(db_obj.query_main()))
         else:
-            print('not closed')
-
+            pass
     else:
         btc_price['error'] = True
 
@@ -136,12 +137,12 @@ def create_frame(msg):
     df.Low = df.Low.astype(float)
     df.Volume = df.Volume.astype(float)
     df.Time = pd.to_datetime(df.Time, unit='ms')
-    df.set_index(pd.DatetimeIndex(df["Time"]))
+    df.set_index(pd.DatetimeIndex(df["Time"]), inplace=False)
     return df
 
 
 def main(symbol, interval):
-    # have to fill up DB with the historic k-lines
+    historical_futures_klines(client=client, symbol=symbol, interval=interval, db_obj=db_obj)
     # stream
     bsm = ThreadedWebsocketManager(environ.get("binance_key"), environ.get("binance_secret"))
     bsm.start()

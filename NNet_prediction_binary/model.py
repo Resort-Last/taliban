@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import mean_absolute_error as mae
 from sklearn.utils import shuffle
-from db_checker import db_checker
+from DBHandler import db_checker
 
 WINDOW_SIZE = 5
 BATCH_SIZE = 50

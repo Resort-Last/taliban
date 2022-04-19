@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 import tensorflow as tf
-from db_checker import db_checker
+from DBHandler import db_checker
 
 
 

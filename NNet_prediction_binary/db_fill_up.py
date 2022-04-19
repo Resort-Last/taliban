@@ -3,7 +3,7 @@ from os import environ
 import pandas as pd
 import pandas_ta as ta
 from NNet_prediction_binary import model_prediction
-from db_checker import trunc_db
+from DBHandler import DBHandler
 import sqlite3
 import time
 
@@ -52,7 +52,7 @@ def fill_db():
     next_close = model_prediction.preprocess()
     print(next_close)
     df = pd.DataFrame(next_close, columns=['next_close'])
-    trunc_db("BTCUSDT")
+    DBHandler.trunc_db()
     conn = sqlite3.connect('../BTCUSDT_Calc.db')
     df.to_sql('BTCUSDT_Calc', conn, if_exists='replace', index=False)
     conn.close()
