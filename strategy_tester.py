@@ -1,17 +1,18 @@
 import pandas as pd
 import pandas_ta as ta
-from get_historical_klines import create_frame
-from matplotlib import pyplot as plt
+from DBHandler import DBHandler
 import pickle
+
+
+db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
+df = db_obj.query_main()
 
 StrategyOne = ta.Strategy(
     name="Momo and Volatility",
     description="Ichimoku, RSI, MACD",
     ta=[
         {"kind": "ichimoku", "include_chikou": False},
-        {"kind": "rsi"},
-        {"kind": "macd", "fast": 9, "slow": 26},
-        {"kind": "ema", "length": 100}]
+        {"kind": "rsi"}]
 )
 
 
@@ -39,10 +40,9 @@ def backtester(df):
 
 
 if __name__ == '__main__':
-    # TODO: RSI exit where it changes from below 30 to above / 70 to below.
-    # df = create_frame()
-    with open('data/historical_data.pkl', 'rb') as f:
-        df = pickle.load(f)
+    # with open('data/historical_data.pkl', 'rb') as f:
+    #     df = pickle.load(f)
+    df = db_obj.query_main()
     df.ta.strategy(StrategyOne)
     df = df.dropna(0)
     df['calc_bool'] = (df['ITS_9'] - df['IKS_26']) >= 0

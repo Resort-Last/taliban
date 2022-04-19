@@ -1,6 +1,7 @@
 from DBHandler import DBHandler
 import pandas as pd
 from get_historical_klines import historical_futures_klines
+from apply_strat import strategy
 from os import environ
 from binance import ThreadedWebsocketManager
 from binance.client import Client
@@ -11,7 +12,7 @@ SYMBOL = 'BTCUSDT'
 INTERVAL = '1m'
 btc_price = {'error': False}
 client = Client(environ.get("binance_key"), environ.get("binance_secret"))
-db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
+db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
 
 
 def btc_trade_history(msg):
@@ -115,14 +116,18 @@ def btc_futures_handler(msg):
     if msg['e'] != 'error':
         btc_price['error'] = False
         cleaned_msg = msg["k"]
-        cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol / ps for some reason)
+        cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol | ps for some reason)
         a = create_frame(cleaned_msg)
-        if bool(cleaned_msg["x"]):
+        df = db_obj.query_main()
+        df = df.append(a)
+        df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
+        _entry, _exit = strategy(df)
+        if _entry != 'nan' or _exit != 'nan':
+            print(f'entry:{_entry}, exit:{_exit}')
+            # STRAT GOES HERE IF BUY / SELL WHATEVER
+        if bool(cleaned_msg["x"]):  # If candle is closed, append it to the DB.
             print(a)
             db_obj.fill_db(a)
-            print(len(db_obj.query_main()))
-        else:
-            pass
     else:
         btc_price['error'] = True
 

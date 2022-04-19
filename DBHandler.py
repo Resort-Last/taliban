@@ -29,8 +29,5 @@ class DBHandler(object):
                 print(f'{e}, table was not dropped because: ')
 
     def fill_db(self, df):
-        df.to_sql(self.table, self.conn, if_exists='append')
+        df.to_sql(self.table, self.conn, if_exists='append', index=False)
 
-
-#   db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
-#   print(db_obj.query_main())
