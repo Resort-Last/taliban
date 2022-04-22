@@ -28,10 +28,29 @@ class DBHandler(object):
             except Exception as e:
                 print(f'{e}, table was not dropped because: ')
 
-    def fill_db(self, df):
+    def append_db(self, df):
         df.to_sql(self.table, self.conn, if_exists='append', index=False)
 
+    def replace_last_entry(self, df):
+        self.cursor.execute(f"""SELECT * FROM {self.table} WHERE Time = '{df['Time'][0]}'""")
+        a = self.cursor.fetchall()
+        if a:
+            self.cursor.execute(f"""
+            UPDATE {self.table}
+            SET
+            Open = '{df['Open'][0]}',
+            High = '{df['High'][0]}',
+            Low = '{df['Low'][0]}',
+            Close = '{df['Close'][0]}',
+            Volume = '{df['Volume'][0]}'
+            WHERE
+            Time = '{df['Time'][0]}'""")
+            self.conn.commit()
+        elif not a:
+            self.append_db(df)
 
-#   SYMBOL = 'BTCUSDT'
-#   db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
-#   print(db_obj.query_main())
+
+SYMBOL = 'BTCUSDT'
+INTERVAL = '1m'
+db_obj = DBHandler(db=f'{SYMBOL}.db', table=f"""{SYMBOL}_Futures""")
+print(db_obj.check_tables())
