@@ -1,43 +1,66 @@
 import pandas as pd
 import pandas_ta as ta
-from binance_con import create_frame
-from matplotlib import pyplot as plt
+from DBHandler import DBHandler
 import pickle
+
+
+db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
+df = db_obj.query_main()
 
 StrategyOne = ta.Strategy(
     name="Momo and Volatility",
     description="Ichimoku, RSI, MACD",
     ta=[
         {"kind": "ichimoku", "include_chikou": False},
-        {"kind": "rsi"},
-        {"kind": "macd", "fast": 9, "slow": 26},
-        {"kind": "ema", "length": 100}]
+        {"kind": "rsi"}]
 )
 
+
+def backtester(df):
+    signal = df.loc[
+        (df['RSI_exit'] == 'SELL') | (df['RSI_exit'] == 'BUY') | (df['ichi_entry'] == 'BUY') | (
+                df['ichi_entry'] == 'SELL')]
+    signal = signal[['Close', 'ichi_entry', 'RSI_exit']]
+    signal = signal.iloc[1:, :]
+    trades = pd.DataFrame(columns={'Type', 'Open', 'Close'})
+    for index, i in enumerate(signal.values):
+        if i[1] == 'BUY':
+            for j in signal.values[index:]:
+                if j[2] == 'SELL':
+                    trades = trades.append({'Type': 'LONG', 'Open': i[0], 'Close': j[0]}, ignore_index=True)
+                    break
+        if i[1] == 'SELL':
+            for j in signal.values[index:]:
+                if j[2] == 'BUY':
+                    trades = trades.append({'Type': 'SHORT', 'Open': i[0], 'Close': j[0]}, ignore_index=True)
+                    break
+    trades.loc[(trades['Type'] == 'LONG'), 'outcome'] = trades['Close'] - trades['Open']
+    trades.loc[(trades['Type'] == 'SHORT'), 'outcome'] = trades['Open'] - trades['Close']
+    print('asd')
+
+
 if __name__ == '__main__':
-    # TODO: RSI exit where it changes from below 30 to above / 70 to below.
-    # df = create_frame()
-    with open('historical_data.pkl', 'rb') as f:
-        df = pickle.load(f)
+    # with open('data/historical_data.pkl', 'rb') as f:
+    #     df = pickle.load(f)
+    df = db_obj.query_main()
     df.ta.strategy(StrategyOne)
     df = df.dropna(0)
     df['calc_bool'] = (df['ITS_9'] - df['IKS_26']) >= 0
-    # df['cloud_pos'] = df['ITS_9'] > df[['ISB_26', 'ISA_9']].max(axis=1)
     df['ichi_signal'] = df['calc_bool'].shift(1) != df['calc_bool']  # TRUE where there is a cross
     df.loc[(df['calc_bool'] == True) & (df['ITS_9'] > df[['ISB_26', 'ISA_9']].max(axis=1)) & (df['ichi_signal'] == True), 'ichi_entry'] = 'BUY'
     df.loc[(df['calc_bool'] == False) & (df['ITS_9'] < df[['ISB_26', 'ISA_9']].min(axis=1)) & (df['ichi_signal']==True), 'ichi_entry'] = 'SELL'
     df['RSI_calc'] = 0
-    df.loc[(df['RSI_14'] < 30), 'RSI_calc'] = -1
-    df.loc[(df['RSI_14'] > 70), 'RSI_calc'] = 1
+    df.loc[(df['RSI_14'] < 20), 'RSI_calc'] = -1
+    df.loc[(df['RSI_14'] > 80), 'RSI_calc'] = 1
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == -1), 'RSI_exit'] = 'BUY'
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == 1), 'RSI_exit'] = 'SELL'
-    signal = df.loc[
-        (df['RSI_exit'] == 'SELL') | (df['RSI_exit'] == 'BUY') | (df['ichi_entry'] == 'BUY') | (
-                    df['ichi_entry'] == 'SELL')]
-    signal = signal[['Close', 'ichi_entry', 'RSI_exit']]
+    backtester(df)
 
 
     print(df.columns)
+
+
+
 
 # Random comment here
 

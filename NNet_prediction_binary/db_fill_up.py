@@ -2,8 +2,8 @@ from binance.client import Client
 from os import environ
 import pandas as pd
 import pandas_ta as ta
-import model_prediction
-from db_checker import db_checker, trunc_db
+from NNet_prediction_binary import model_prediction
+from DBHandler import DBHandler
 import sqlite3
 import time
 
@@ -39,7 +39,7 @@ def create_historical_frame(klines):
     df.set_index(pd.DatetimeIndex(df["Time"]))
     df.ta.strategy(CustomStrategy)
 
-    conn = sqlite3.connect('BTCUSDT.db')
+    conn = sqlite3.connect('../BTCUSDT.db')
     df.to_sql('BTCUSDT', conn, if_exists='append', index=False)
     conn.close()
 
@@ -52,8 +52,8 @@ def fill_db():
     next_close = model_prediction.preprocess()
     print(next_close)
     df = pd.DataFrame(next_close, columns=['next_close'])
-    trunc_db("BTCUSDT")
-    conn = sqlite3.connect('BTCUSDT_Calc.db')
+    DBHandler.trunc_db()
+    conn = sqlite3.connect('../BTCUSDT_Calc.db')
     df.to_sql('BTCUSDT_Calc', conn, if_exists='replace', index=False)
     conn.close()
 

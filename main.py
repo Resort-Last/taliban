@@ -1,12 +1,21 @@
-from db_checker import db_checker, trunc_db
+from DBHandler import DBHandler
 import pandas as pd
-import pandas_ta as ta
+from get_historical_klines import historical_futures_klines
+from apply_strat import strategy
 from os import environ
-import time
 from binance import ThreadedWebsocketManager
 from binance.client import Client
 from binance.enums import *
 # 31.17 value of my usdt + btc
+
+SYMBOL = 'BTCUSDT'
+INTERVAL = '1m'
+btc_price = {'error': False}
+client = Client(environ.get("binance_key"), environ.get("binance_secret"))
+db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
+
+# PROBABLY THE APPLY STRAT IS SLOWING DOWN THE PROCESS AND DUE TO THIS, IT IS SKIPPING KLINES. I HAVE TO SEPERATE THE 2 THINGS AND RUN THEM SEPERATELY
+# HAVE THE STREAM RUN IN A DIFFERENT PS SCRIPT TO UPDATE DB, AND USE THE Client to enter or exit positions.
 
 
 def btc_trade_history(msg):
@@ -80,9 +89,57 @@ def btc_trade_history(msg):
         print(msg['e'])
 
 
+def btc_futures_handler(msg):
+    """ define how to process incoming WebSocket messages
+        {
+    "e":"continuous_kline",   // Event type
+    "E":1607443058651,        // Event time
+    "ps":"BTCUSDT",           // Pair
+    "ct":"PERPETUAL"          // Contract type
+    "k":{
+        "t":1607443020000,      // Kline start time
+        "T":1607443079999,      // Kline close time
+        "i":"1m",               // Interval
+        "f":116467658886,       // First trade ID
+        "L":116468012423,       // Last trade ID
+        "o":"18787.00",         // Open price
+        "c":"18804.04",         // Close price
+        "h":"18804.04",         // High price
+        "l":"18786.54",         // Low price
+        "v":"197.664",          // volume
+        "n": 543,               // Number of trades
+        "x":false,              // Is this kline closed?
+        "q":"3715253.19494",    // Quote asset volume
+        "V":"184.769",          // Taker buy volume
+        "Q":"3472925.84746",    //Taker buy quote asset volume
+        "B":"0"                 // Ignore
+    }
+}
+    """
+    if msg['e'] != 'error':
+        btc_price['error'] = False
+        cleaned_msg = msg["k"]
+        cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol | ps for some reason)
+        a = create_frame(cleaned_msg)
+        #   df = db_obj.query_main()
+        #   df = df.append(a)
+        #   df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
+        #   _entry, _exit = strategy(df)
+        #   if not pd.isna(_entry) or not pd.isna(_exit):
+        #       print(f'entry:{_entry}, exit:{_exit}')
+        #       # STRAT GOES HERE IF BUY / SELL WHATEVER
+        if bool(cleaned_msg["x"]):  # If candle is closed, append it to the DB.
+            print(a)
+            db_obj.fill_db(a)
+        elif not bool(cleaned_msg["x"]):
+            pass
+    else:
+        btc_price['error'] = True
+
+
 def create_frame(msg):
     df = pd.DataFrame([msg])
-    df = df.loc[:, ['E', 's', 'o', 'c', 'h', 'l', 'v']]
+    df = df.loc[:, ['t', 's', 'o', 'c', 'h', 'l', 'v']]
     df.columns = ['Time', 'Symbol', 'Open', 'Close', 'High', 'Low', 'Volume']
     df.Open = df.Open.astype(float)
     df.Close = df.Close.astype(float)
@@ -90,28 +147,17 @@ def create_frame(msg):
     df.Low = df.Low.astype(float)
     df.Volume = df.Volume.astype(float)
     df.Time = pd.to_datetime(df.Time, unit='ms')
-    df.set_index(pd.DatetimeIndex(df["Time"]))
+    df.set_index(pd.DatetimeIndex(df["Time"]), inplace=False)
     return df
 
 
-def main():
+def main(symbol, interval):
+    historical_futures_klines(client=client, symbol=symbol, interval=interval, db_obj=db_obj)
     # stream
     bsm = ThreadedWebsocketManager(environ.get("binance_key"), environ.get("binance_secret"))
     bsm.start()
-    bsm.start_kline_socket(callback=btc_trade_history, symbol='BTCUSDT', interval='5m', )
+    bsm.start_kline_futures_socket(callback=btc_futures_handler, symbol=symbol, interval=interval)
 
-
-btc_price = {'error': False}
-client = Client(environ.get("binance_key"), environ.get("binance_secret"))
 
 if __name__ == '__main__':
-    main()
-
-# get the last 200~ entries.
-# run the  customstrategy on it and save it to db
-# predict th next value
-# start stream
-# if stream ['Close'] is higher then the predicted value SELL else BUY
-#  keep tracking the stream until the profit or stop loss is hit and execute it.
-# close stream
-# REPEAT
+    main(symbol=SYMBOL, interval=INTERVAL)
