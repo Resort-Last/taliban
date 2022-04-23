@@ -50,7 +50,7 @@ class DBHandler(object):
             self.append_db(df)
 
 
-SYMBOL = 'BTCUSDT'
-INTERVAL = '1m'
-db_obj = DBHandler(db=f'{SYMBOL}.db', table=f"""{SYMBOL}_Futures""")
-print(db_obj.check_tables())
+# SYMBOL = 'BTCUSDT'
+# INTERVAL = '1m'
+# db_obj = DBHandler(db=f'{SYMBOL}.db', table=f"""{SYMBOL}_Futures""")
+# print(db_obj.query_main())
