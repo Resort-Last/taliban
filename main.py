@@ -1,5 +1,4 @@
 import pandas as pd
-from binance.enums import *
 from os import environ
 import config
 import time
@@ -11,6 +10,8 @@ SYMBOL = config.SYMBOL
 INTERVAL = config.INTERVAL
 btc_price = {'error': False}
 db_obj = config.db_obj
+profit_mod = config.profit_mod
+quantity = config.quantity
 
 
 def reverser(pos_type):
@@ -24,11 +25,12 @@ def reverser(pos_type):
 
 def binance_con(price, pos_entry, pos_exit):
     client = Client(environ.get("binance_key"), environ.get("binance_secret"))
-    client.futures_change_leverage(symbol=SYMBOL, leverage=3)
-    profit_mod = 0.05
-    for item in config.client.futures_position_information():
+    client.futures_change_leverage(symbol=SYMBOL, leverage=config.leverage)
+    open_orders = client.futures_get_open_orders(symbol=SYMBOL)
+    print(len(open_orders))
+    for item in client.futures_position_information():
         if item['symbol'] == SYMBOL:
-            if float(item['positionAmt']) == 0.00:
+            if float(item['positionAmt']) == 0.00 and len(open_orders) == 0:
                 if not pd.isna(pos_entry):
                     client.futures_create_order(
                         symbol=SYMBOL,
@@ -36,7 +38,7 @@ def binance_con(price, pos_entry, pos_exit):
                         timeInForce='GTC',  # Can be changed - see link to API doc below
                         price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
                         side=pos_entry,  # Direction ('BUY' / 'SELL'), string
-                        quantity=0.001,  # Number of coins you wish to buy / sell, float
+                        quantity=quantity,  # Number of coins you wish to buy / sell, float
                     )
                     if pos_entry == 'BUY':
                         tp_price = float(round(price * (1+profit_mod), 0))
@@ -51,7 +53,7 @@ def binance_con(price, pos_entry, pos_exit):
                         symbol=SYMBOL,
                         type='TAKE_PROFIT',
                         price=tp_price,
-                        quantity=0.001,
+                        quantity=quantity,
                         stopPrice=tp_price,
                         side=reverser(pos_entry)
                     )
@@ -59,23 +61,26 @@ def binance_con(price, pos_entry, pos_exit):
                         symbol=SYMBOL,
                         type='STOP',
                         price=sl_price,
-                        quantity=0.001,
+                        quantity=quantity,
                         stopPrice=sl_price,
                         side=reverser(pos_entry)
                     )
                     print(f'Created order: {pos_entry} @ {price}')
-            elif float(item['positionAmt']) > 0.00:
+            elif float(item['positionAmt']) > 0.00 and len(open_orders) == 2:
                 if not pd.isna(pos_exit):
-                    side = reverser(item['positionSide'])
-                    client.futures_create_order(
-                        symbol=SYMBOL,
-                        type='LIMIT',
-                        timeInForce='GTC',  # Can be changed - see link to API doc below
-                        price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
-                        side=side,  # Direction ('BUY' / 'SELL'), string
-                        quantity=0.001,  # Number of coins you wish to buy / sell, float
-                    )
-                    print('sell this position')
+                    print(pos_exit, client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
+                    if pos_exit == client.futures_get_open_orders(symbol=SYMBOL)[0]["side"]:
+                        client.futures_create_order(
+                            symbol=SYMBOL,
+                            type='LIMIT',
+                            timeInForce='GTC',  # Can be changed - see link to API doc below
+                            price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
+                            side=pos_exit,  # Direction ('BUY' / 'SELL'), string
+                            quantity=quantity,  # Number of coins you wish to buy / sell, float
+                        )
+                        print('close this position')
+            elif len(open_orders) == 2:  # ha csak TP SL marad.
+                client.futures_cancel_all_open_orders(symbol=SYMBOL)
 
     """https://binance-docs.github.io/apidocs/futures/en/#new-order-trade"""
 

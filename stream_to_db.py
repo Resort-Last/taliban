@@ -6,8 +6,8 @@ import config
 SYMBOL = config.SYMBOL
 INTERVAL = config.INTERVAL
 btc_price = {'error': False}
-client = config.client
-bsm = config.bsm
+client = config.get_bsm()['client']
+bsm = config.get_bsm()['bsm']
 db_obj = config.db_obj
 
 

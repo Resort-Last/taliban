@@ -6,17 +6,19 @@ SYMBOL = config.SYMBOL
 INTERVAL = config.INTERVAL
 btc_price = {'error': False}
 db_obj = config.db_obj
+client = config.get_bsm()['client']
 
 pos_entry = 'SELL'
 price = 39700
 
 
 def open_pos():
-    for item in config.client.futures_position_information():
+    for item in client.futures_position_information():
         if item['symbol'] == SYMBOL:
             print(item)
             if float(item['positionAmt']) > 0.00:
                 print('sell this position')
+                print(client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
             else:
                 print('no position open')
 
@@ -32,3 +34,4 @@ def create_order():
     )
 
 
+open_pos()

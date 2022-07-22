@@ -54,3 +54,4 @@ class DBHandler(object):
 # INTERVAL = '1m'
 # db_obj = DBHandler(db=f'{SYMBOL}.db', table=f"""{SYMBOL}_Futures""")
 # print(db_obj.query_main())
+

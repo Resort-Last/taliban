@@ -22,4 +22,3 @@ def historical_futures_klines(client, symbol, interval, db_obj):
     db_obj.trunc_db(sure=True)
     db_obj.append_db(df)
     print(f'filled DB with historical klines len data: {len(df)}')
-
