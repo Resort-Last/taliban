@@ -80,7 +80,7 @@ def binance_con(price, pos_entry, pos_exit):
                             quantity=quantity,  # Number of coins you wish to buy / sell, float
                         )
                         print('close this position')
-            elif float(item['positionAmt']) == 0.00 and len(open_orders) == 2:  # ha csak TP SL marad.
+            elif float(item['positionAmt']) == 0.00 and len(open_orders) > 0:  # ha csak TP SL marad.
                 print('trying to close the TP SL')
                 client.futures_cancel_all_open_orders(symbol=SYMBOL)
 
