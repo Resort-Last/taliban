@@ -1,5 +1,10 @@
+from DBHandler import DBHandler
+import pandas as pd
 import pandas_ta as ta
 
+
+# db_obj = DBHandler('BTCUSDT.db', 'BTCUSDT_Futures')
+# df = db_obj.query_main()
 
 StrategyOne = ta.Strategy(
     name="Momo and Volatility",
@@ -20,9 +25,10 @@ def strategy(df):
     df.loc[(df['calc_bool'] == True) & (df['ITS_9'] > df[['ISB_26', 'ISA_9']].max(axis=1)) & (df['ichi_signal'] == True), 'ichi_entry'] = 'BUY'
     df.loc[(df['calc_bool'] == False) & (df['ITS_9'] < df[['ISB_26', 'ISA_9']].min(axis=1)) & (df['ichi_signal']==True), 'ichi_entry'] = 'SELL'
     df['RSI_calc'] = 0
-    df.loc[(df['RSI_14'] < 25), 'RSI_calc'] = -1
-    df.loc[(df['RSI_14'] > 75), 'RSI_calc'] = 1
+    df.loc[(df['RSI_14'] < 20), 'RSI_calc'] = -1
+    df.loc[(df['RSI_14'] > 80), 'RSI_calc'] = 1
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == -1), 'RSI_exit'] = 'BUY'
     df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == 1), 'RSI_exit'] = 'SELL'
+    print(f"{df.iloc[-1]['ichi_entry']} {df.iloc[-1]['RSI_exit']} - 'dingdong, returning pong.")
     return df.iloc[-1]['ichi_entry'], df.iloc[-1]['RSI_exit']
 
