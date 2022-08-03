@@ -4,6 +4,7 @@ import config
 import time
 from apply_strat import strategy
 from binance.client import Client
+from datetime import datetime
 # 31.17 value of my usdt + btc
 
 SYMBOL = config.SYMBOL
@@ -89,13 +90,16 @@ def binance_con(price, pos_entry, pos_exit):
 
 def main():
     while True:
-        df = db_obj.query_main()
-        df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
-        _entry, _exit = strategy(df)
-        if not pd.isna(_entry) or not pd.isna(_exit):
-            print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
-            binance_con(df.iloc[-1].Close, _entry, _exit)
-            # ha van entry/exit go to do client stuff.
+        try:
+            df = db_obj.query_main()
+            df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
+            _entry, _exit = strategy(df)
+            if not pd.isna(_entry) or not pd.isna(_exit):
+                print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
+                binance_con(df.iloc[-1].Close, _entry, _exit)
+                # ha van entry/exit go to do client stuff.
+        except pd.io.sql.DatabaseError as e:
+            print(f"{datetime.now()}....\n{e}\n")
         time.sleep(10)
 
 
