@@ -1,163 +1,107 @@
-from DBHandler import DBHandler
 import pandas as pd
-from get_historical_klines import historical_futures_klines
-from apply_strat import strategy
 from os import environ
-from binance import ThreadedWebsocketManager
+import config
+import time
+from apply_strat import strategy
 from binance.client import Client
-from binance.enums import *
+from datetime import datetime
 # 31.17 value of my usdt + btc
 
-SYMBOL = 'BTCUSDT'
-INTERVAL = '1m'
+SYMBOL = config.SYMBOL
+INTERVAL = config.INTERVAL
 btc_price = {'error': False}
-client = Client(environ.get("binance_key"), environ.get("binance_secret"))
-db_obj = DBHandler(f'{SYMBOL}.db', f'{SYMBOL}_Futures')
-
-# PROBABLY THE APPLY STRAT IS SLOWING DOWN THE PROCESS AND DUE TO THIS, IT IS SKIPPING KLINES. I HAVE TO SEPERATE THE 2 THINGS AND RUN THEM SEPERATELY
-# HAVE THE STREAM RUN IN A DIFFERENT PS SCRIPT TO UPDATE DB, AND USE THE Client to enter or exit positions.
+db_obj = config.db_obj
+profit_mod = config.profit_mod
+quantity = config.quantity
 
 
-def btc_trade_history(msg):
-    """ define how to process incoming WebSocket messages """
-    if msg['e'] != 'error':
-        open_order = client.get_open_orders(symbol='BTCUSDT')
-        btc_price['error'] = False
-        cleaned_msg = msg["k"]
-        cleaned_msg["E"] = msg["E"]
-        a = create_frame(cleaned_msg)
-        next_close = db_checker('BTCUSDT_Calc').values[0][0]
-        current_close = a['Close'].values[0]
-        print(current_close, next_close)
-        if not open_order:
-            if next_close > current_close:  # IF WE PREDICT THAT THE NEXT CLOSE IS HIGHER THE CURRENT CLOSE
-                if 1 - current_close / next_close > 0.005:  # IF THE DIFFERENCE BETWEEN THE TWO VALUES IS > 0.005
-                    client.create_order(
-                        symbol='BTCUSDT',
-                        side=SIDE_BUY,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=0.0003,
-                        price=str(current_close))
-                    client.create_order(
-                        symbol='BTCUSDT',
-                        side=SIDE_SELL,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=0.0003,
-                        price=str("{:0.0{}f}".format(next_close, 0)))
-                    print(f'created BUY order WITH PRICE {current_close}) SHOULD SELL AT {str("{:0.0{}f}".format(next_close, 0))}')
-                else:
-                    print('difference between next and current close is not profitable')
-                    pass
-            elif next_close <= current_close:   # IF WE PREDICT THAT THE NEXT CLOSE IS LOWER
-                if 1 - next_close / current_close > 0.005:  # IF THE DIFFERENCE BETWEEN THE TWO VALUES IS > 0.005
-                    client.create_order(
-                        symbol='BTCUSDT',
-                        side=SIDE_SELL,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=0.0003,
-                        price=str(current_close))
-                    client.create_order(
-                        symbol='BTCUSDT',
-                        side=SIDE_BUY,
-                        type=ORDER_TYPE_LIMIT,
-                        timeInForce=TIME_IN_FORCE_GTC,
-                        quantity=0.0003,
-                        price=str("{:0.0{}f}".format(next_close, 0)))
-                    print(f'created SELL order WITH PRICE {current_close}) SHOULD BUY AT {str("{:0.0{}f}".format(next_close, 0))}')
-                else:
-                    print('difference between next and current close is not profitable')
-                    pass
-
-        elif open_order:
-            # check if open order would make money, if yes make money. if not do nothing.
-            if len(open_order) == 1:
-                if abs(float(open_order[0]['price']) - next_close) > 200:
-                    # CODE HERE TO CANCEL ORDER AND PLACE NEW ORDER WITH THE NEXT CLOSE
-                    # THIS WAY WE HAVE MORE TRADES BUT WITH LESS PROFITABILITY PER TRADE (EVEN LOSS)
-                    side = open_order[0]['side']
-                    print('should cancel and create new order')
-                else:
-                    # DO NOTHING
-                    print('leave it as it is ')
-            else:
-                print('multiple orders open.')
+def reverser(pos_type):
+    if pos_type == 'BUY':
+        return 'SELL'
+    elif pos_type == 'SELL':
+        return 'BUY'
     else:
-        btc_price['error'] = True
-        print(msg['e'])
+        return 'BOTH'
 
 
-def btc_futures_handler(msg):
-    """ define how to process incoming WebSocket messages
-        {
-    "e":"continuous_kline",   // Event type
-    "E":1607443058651,        // Event time
-    "ps":"BTCUSDT",           // Pair
-    "ct":"PERPETUAL"          // Contract type
-    "k":{
-        "t":1607443020000,      // Kline start time
-        "T":1607443079999,      // Kline close time
-        "i":"1m",               // Interval
-        "f":116467658886,       // First trade ID
-        "L":116468012423,       // Last trade ID
-        "o":"18787.00",         // Open price
-        "c":"18804.04",         // Close price
-        "h":"18804.04",         // High price
-        "l":"18786.54",         // Low price
-        "v":"197.664",          // volume
-        "n": 543,               // Number of trades
-        "x":false,              // Is this kline closed?
-        "q":"3715253.19494",    // Quote asset volume
-        "V":"184.769",          // Taker buy volume
-        "Q":"3472925.84746",    //Taker buy quote asset volume
-        "B":"0"                 // Ignore
-    }
-}
-    """
-    if msg['e'] != 'error':
-        btc_price['error'] = False
-        cleaned_msg = msg["k"]
-        cleaned_msg["s"] = msg["ps"]    # symbol (in futures it is perpetual symbol | ps for some reason)
-        a = create_frame(cleaned_msg)
-        #   df = db_obj.query_main()
-        #   df = df.append(a)
-        #   df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
-        #   _entry, _exit = strategy(df)
-        #   if not pd.isna(_entry) or not pd.isna(_exit):
-        #       print(f'entry:{_entry}, exit:{_exit}')
-        #       # STRAT GOES HERE IF BUY / SELL WHATEVER
-        if bool(cleaned_msg["x"]):  # If candle is closed, append it to the DB.
-            print(a)
-            db_obj.fill_db(a)
-        elif not bool(cleaned_msg["x"]):
-            pass
-    else:
-        btc_price['error'] = True
+def binance_con(price, pos_entry, pos_exit):
+    client = Client(environ.get("binance_key"), environ.get("binance_secret"))
+    client.futures_change_leverage(symbol=SYMBOL, leverage=config.leverage)
+    open_orders = client.futures_get_open_orders(symbol=SYMBOL)
+    print(len(open_orders))
+    for item in client.futures_position_information():
+        if item['symbol'] == SYMBOL:
+            if float(item['positionAmt']) == 0.00 and len(open_orders) == 0:
+                if not pd.isna(pos_entry):
+                    client.futures_create_order(
+                        symbol=SYMBOL,
+                        type='LIMIT',
+                        timeInForce='GTC',  # Can be changed - see link to API doc below
+                        price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
+                        side=pos_entry,  # Direction ('BUY' / 'SELL'), string
+                        quantity=quantity,  # Number of coins you wish to buy / sell, float
+                    )
+                    if pos_entry == 'BUY':
+                        tp_price = float(round(price * (1+profit_mod), 0))
+                        sl_price = float(round(price * (1-profit_mod), 0))
+                    elif pos_entry == 'SELL':
+                        tp_price = float(round(price * (1-profit_mod), 0))
+                        sl_price = float(round(price * (1+profit_mod), 0))
+                    else:
+                        tp_price, sl_price = price
+                        print('HUGE ISSUES HERE. THIS SHOULD NEVER HAPPEN')
+                    client.futures_create_order(
+                        symbol=SYMBOL,
+                        type='TAKE_PROFIT',
+                        price=tp_price,
+                        quantity=quantity,
+                        stopPrice=tp_price,
+                        side=reverser(pos_entry)
+                    )
+                    client.futures_create_order(
+                        symbol=SYMBOL,
+                        type='STOP',
+                        price=sl_price,
+                        quantity=quantity,
+                        stopPrice=sl_price,
+                        side=reverser(pos_entry)
+                    )
+                    print(f'Created order: {pos_entry} @ {price}')
+            elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
+                print('want to close position')
+                if not pd.isna(pos_exit):
+                    print(pos_exit, client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
+                    if pos_exit == client.futures_get_open_orders(symbol=SYMBOL)[0]["side"]:
+                        client.futures_create_order(
+                            symbol=SYMBOL,
+                            type='LIMIT',
+                            timeInForce='GTC',  # Can be changed - see link to API doc below
+                            price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
+                            side=pos_exit,  # Direction ('BUY' / 'SELL'), string
+                            quantity=quantity,  # Number of coins you wish to buy / sell, float
+                        )
+                        print('close this position')
+            elif float(item['positionAmt']) == 0.00 and len(open_orders) > 0:  # ha csak TP SL marad.
+                print('trying to close the TP SL')
+                client.futures_cancel_all_open_orders(symbol=SYMBOL)
+
+    """https://binance-docs.github.io/apidocs/futures/en/#new-order-trade"""
 
 
-def create_frame(msg):
-    df = pd.DataFrame([msg])
-    df = df.loc[:, ['t', 's', 'o', 'c', 'h', 'l', 'v']]
-    df.columns = ['Time', 'Symbol', 'Open', 'Close', 'High', 'Low', 'Volume']
-    df.Open = df.Open.astype(float)
-    df.Close = df.Close.astype(float)
-    df.High = df.High.astype(float)
-    df.Low = df.Low.astype(float)
-    df.Volume = df.Volume.astype(float)
-    df.Time = pd.to_datetime(df.Time, unit='ms')
-    df.set_index(pd.DatetimeIndex(df["Time"]), inplace=False)
-    return df
-
-
-def main(symbol, interval):
-    historical_futures_klines(client=client, symbol=symbol, interval=interval, db_obj=db_obj)
-    # stream
-    bsm = ThreadedWebsocketManager(environ.get("binance_key"), environ.get("binance_secret"))
-    bsm.start()
-    bsm.start_kline_futures_socket(callback=btc_futures_handler, symbol=symbol, interval=interval)
+def main():
+    while True:
+        try:
+            df = db_obj.query_main()
+            df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
+            _entry, _exit = strategy(df)
+            if not pd.isna(_entry) or not pd.isna(_exit):
+                print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
+                binance_con(df.iloc[-1].Close, _entry, _exit)
+                # ha van entry/exit go to do client stuff.
+        except pd.io.sql.DatabaseError as e:
+            print(f"{datetime.now()}....\n{e}\n")
+        time.sleep(10)
 
 
 if __name__ == '__main__':
-    main(symbol=SYMBOL, interval=INTERVAL)
+    main()
