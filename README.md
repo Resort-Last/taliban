@@ -18,4 +18,4 @@ This function updates the db every second.
 
 2. run `main.py`
 
-3. profit.
+3. profit? 
