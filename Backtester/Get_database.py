@@ -86,9 +86,7 @@ def transform_database(database, interval):
     candle_dataframe = pd.DataFrame.from_dict(candles)
     return candle_dataframe
 
-
 transformed_db = transform_database(db_obj,5)
 rsidf = transformed_db.ta.rsi()
 transformed_db = pd.concat([transformed_db, rsidf], axis=1)
-
 
