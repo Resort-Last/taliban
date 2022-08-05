@@ -4,7 +4,7 @@ import pandas as pd
 import pandas_ta as ta
 from DBHandler import DBHandler
 import sqlite3
-
+from Notification import send_discord_message
 
 api_key = os.getenv("Api_key")
 api_secret = os.getenv('Api_secret')
@@ -57,6 +57,7 @@ def append_database(symbol, database):
     df.Low = df.Low.astype(float)
     df.Volume = df.Volume.astype(float)
     database.append_db(df[1:])
+    send_discord_message(f'update the database with data from {lastentry} to now')
 
 
 def transform_database(database, interval):
@@ -86,5 +87,8 @@ def transform_database(database, interval):
     return candle_dataframe
 
 
-x = transform_database(db_obj,5)
-print('done')
+transformed_db = transform_database(db_obj,5)
+rsidf = transformed_db.ta.rsi()
+transformed_db = pd.concat([transformed_db, rsidf], axis=1)
+
+

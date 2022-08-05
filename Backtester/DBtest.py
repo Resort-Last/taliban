@@ -1,13 +1,18 @@
 import sqlite3
 import pandas as pd
 from datetime import datetime
+import matplotlib
+import pandas_ta as ta
+import matplotlib.pyplot as plt
 
 con = sqlite3.connect('rawdata.db')
 data = pd.read_sql_query('Select * from rawdata;', con)
 
-asd = "asdasd"
-print(asd[1:])
-
+changing_indicator = data.ta.obv()
+figure, axes = plt.subplots(1, 2)
+data.plot(ax=axes[0])
+changing_indicator.plot(ax=axes[1])
+plt.show()
 # for i in range (0, (len(shortdb))):
 #     timelist=[]
 #     openlist=[]
