@@ -1,12 +1,14 @@
 from binance.client import Client
-import os
+from os import environ
 import pandas as pd
 from DBHandler import DBHandler
 import sqlite3
 from Notification import send_discord_message
 
-api_key = os.getenv("binance_key")
-api_secret = os.getenv('binance_secret')
+
+api_key = environ.get("binance_key")
+api_secret = environ.get('binance_secret')
+
 client = Client(api_key, api_secret)
 db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
 con = sqlite3.connect('rawdata.db')
@@ -89,4 +91,3 @@ def transform_database(database, interval):
 # print('asd')
 # rsidf = transformed_db.ta.rsi()
 # transformed_db = pd.concat([transformed_db, rsidf], axis=1)
-
