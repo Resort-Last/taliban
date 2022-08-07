@@ -4,10 +4,11 @@ from datetime import datetime
 import matplotlib
 import pandas_ta as ta
 import matplotlib.pyplot as plt
+from Get_database import transform_database
 
 con = sqlite3.connect('rawdata.db')
 data = pd.read_sql_query('Select * from rawdata;', con)
-
+x = transform_database(data, 15)
 changing_indicator = data.ta.obv()
 figure, axes = plt.subplots(1, 2)
 data.plot(ax=axes[0])
