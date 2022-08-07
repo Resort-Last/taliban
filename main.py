@@ -96,7 +96,7 @@ def main():
             df = db_obj.query_main()
             df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
             _entry, _exit = strategy(df)
-            with open(heartbeat_log.txt, 'w+') as txtfile:
+            with open("heartbeat_log.txt", 'w+') as txtfile:
                 txtfile.write(df.iloc[-1]['Time'])
             if not pd.isna(_entry) or not pd.isna(_exit):
                 print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
