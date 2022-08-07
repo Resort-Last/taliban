@@ -15,9 +15,12 @@ StrategyOne = ta.Strategy(
 
 
 class BackTester:
+    """TODO:Calculate profits"""
 
-    def __init__(self, strategy, db, interval):
+    def __init__(self, strategy, db, interval, start_date, end_date):
         self.strategy = strategy
+        self.start_date = start_date
+        self.end_date = end_date
         self.dataframe = transform_database(db, interval)
         self.processed_df = self.apply_strategy()
         print(self.processed_df)
@@ -44,10 +47,18 @@ class BackTester:
         df.loc[(df['RSI_calc'] == 0) & (df['RSI_calc'].shift(1) == 1), f'{self.strategy.ta[1]["kind"]}_exit'] = 'SELL'
         signal_two = df.dropna(subset=[f'{self.strategy.ta[1]["kind"]}_exit'])
 
-        # combined
+        # combined list without the first signal
+
         signal = signal_one.append(signal_two)
         signal = signal.sort_values(by='Time')
         signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{self.strategy.ta[0]["kind"]}_entry', f'{self.strategy.ta[1]["kind"]}_exit']]
+
+        # apply time constraints
+        if self.start_date:
+            signal = signal[(signal['Time'] >= self.start_date)]
+        if self.end_date:
+            signal = signal[(signal['Time'] <= self.end_date)]
+
         return signal
 
     def calculate_profit(self):
@@ -55,4 +66,4 @@ class BackTester:
 
 
 if __name__ == '__main__':
-    dingdong = BackTester(strategy=StrategyOne, db=db_obj, interval=15)
+    dingdong = BackTester(strategy=StrategyOne, db=db_obj, interval=15, start_date='2022-01-01', end_date=None)
