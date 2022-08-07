@@ -1,10 +1,7 @@
 import os
-from dotenv import load_dotenv
 from discord.ext import commands
 
 
-
-load_dotenv()
 Token = os.getenv('DISCORD_TOKEN')
 Guild = os.getenv('DISCORD_GUILD')
 Channel = "80-as-evek"
@@ -17,6 +14,13 @@ async def heartbeat(ctx):
     with open('heartbeat_log.txt') as f:
         lines = f.readlines()
     await ctx.send(lines)
+
+
+@bot.command(name='slave') #2 command, kulon kulon a serverekre
+async def heartbeat(ctx):
+    lines = 'yes Master? How may I help you today? '
+    await ctx.send(lines)
+
 
 
 @bot.event
