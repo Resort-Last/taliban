@@ -57,7 +57,7 @@ def append_database(symbol, database):
     df.Low = df.Low.astype(float)
     df.Volume = df.Volume.astype(float)
     database.append_db(df[1:])
-    send_discord_message(f'update the database with data from {lastentry} to now')
+    # send_discord_message(f'update the database with data from {lastentry} to now')
 
 
 def transform_database(database, interval):
