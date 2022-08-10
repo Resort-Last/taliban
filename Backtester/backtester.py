@@ -91,7 +91,18 @@ class BackTester:
                             break
             trades.loc[(trades['Type'] == 'LONG'), 'outcome'] = trades['Close'] - trades['Open']
             trades.loc[(trades['Type'] == 'SHORT'), 'outcome'] = trades['Open'] - trades['Close']
-            print(f"profit with entry: {_entry} exit: {_exit}\t{trades['outcome'].sum()}")
+            print(f"Stats: with entry: {_entry} exit: {_exit}\n")
+            print(f"""All No.:{len(trades)}\tprofit:{trades['outcome'].sum()}\n""")
+            print(f"""LONG No.: {len(trades.query('Type == "LONG"'))}\t
+            profit:{trades.query('Type == "LONG"')['outcome'].sum()}\t
+            max:{trades.query('Type == "LONG"')['outcome'].max()} \t
+            min:{trades.query('Type == "LONG"')['outcome'].min()}\n""")
+            print(f"""SHORT No.: {len(trades.query('Type == "SHORT"'))}\t
+            profit:{trades.query('Type == "SHORT"')['outcome'].sum()}\t
+            max:{trades.query('Type == "SHORT"')['outcome'].max()}\t
+            min:{trades.query('Type == "SHORT"')['outcome'].min()}\n""")
+            print('-'*30)
+
 
     # Ta.lib goes here
     def ta_lib_calculations(self, strat):
@@ -124,7 +135,6 @@ class BackTester:
             self.df['macd_signal'] = self.df['macdh_calc'].shift(1) != self.df['macdh_calc']
             self.df.loc[(self.df['macdh_calc'] == False) & (self.df['macd_signal'] == True), f'{strat}'] = 'SELL'
             self.df.loc[(self.df['macdh_calc'] == True) & (self.df['macd_signal'] == True), f'{strat}'] = 'BUY'
-
             signal = self.df.dropna(subset=[f'{strat}'])
             signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
@@ -149,3 +159,4 @@ if __name__ == '__main__':
                           start_date='2021-09-01',
                           end_date=None,
                           signals=['ichimoku', 'rsi', 'macd', 'bop'])
+                          
