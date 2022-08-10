@@ -64,12 +64,12 @@ class BackTester:
             TODO: should have lookback(variable) -- TO BE REVISED.
             TODO: calculate number of trades
             TODO: pickle it down?"""
-        last_time = pd.to_datetime('1990-09-09 09:00:00')
         col_list = []
         for col in self.processed_df.columns:
             col_list.append(col)
         for signal in ultra_looper(self.signals):
             _entry, _exit = signal[0], signal[1]
+            last_time = pd.to_datetime('1990-09-09 09:00:00')
 
             trades = pd.DataFrame(columns={'Type', 'Open', 'Close'})
             for ind, i in enumerate(self.processed_df.values):
