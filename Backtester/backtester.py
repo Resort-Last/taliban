@@ -51,7 +51,7 @@ class BackTester:
         self.calculate_profit()
 
     def apply_strategy(self):
-        signal = pd.DataFrame().append(self.signal_list)
+        signal = pd.DataFrame.merge(*self.signal_list, how='outer')
         signal = signal.sort_values(by='Time')
         if self.start_date:
             signal = signal[(signal['Time'] >= self.start_date)]
