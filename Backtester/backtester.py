@@ -2,7 +2,7 @@ from Get_database import transform_database
 from DBHandler import DBHandler
 import pandas as pd
 import pandas_ta as ta
-
+from functools import reduce
 
 db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
 StrategyOne = ta.Strategy(
@@ -10,7 +10,8 @@ StrategyOne = ta.Strategy(
     description="Ichimoku, RSI, MACD",
     ta=[
         {"kind": "ichimoku", "include_chikou": False},
-        {"kind": "rsi"}]
+        {"kind": "rsi"},
+        {"kind": "macd"}]
 )
 
 
@@ -51,7 +52,7 @@ class BackTester:
         self.calculate_profit()
 
     def apply_strategy(self):
-        signal = pd.DataFrame.merge(*self.signal_list, how='outer')
+        signal = reduce(lambda left, right: pd.merge(left, right, how='outer'), self.signal_list)
         signal = signal.sort_values(by='Time')
         if self.start_date:
             signal = signal[(signal['Time'] >= self.start_date)]
@@ -95,10 +96,13 @@ class BackTester:
     def ta_lib_calculations(self, strat):
         if strat == 'ichimoku':
             self.df['calc_bool'] = (self.df['ITS_9'] - self.df['IKS_26']) >= 0
-            self.df['ichi_signal'] = self.df['calc_bool'].shift(1) != self.df['calc_bool']  # TRUE where there is a cross
-            self.df.loc[(self.df['calc_bool'] == True) & (self.df['ITS_9'] > self.df[['ISB_26', 'ISA_9']].max(axis=1)) & (
+            self.df['ichi_signal'] = self.df['calc_bool'].shift(1) != self.df[
+                'calc_bool']  # TRUE where there is a cross
+            self.df.loc[
+                (self.df['calc_bool'] == True) & (self.df['ITS_9'] > self.df[['ISB_26', 'ISA_9']].max(axis=1)) & (
                         self.df['ichi_signal'] == True), f'{strat}'] = 'BUY'
-            self.df.loc[(self.df['calc_bool'] == False) & (self.df['ITS_9'] < self.df[['ISB_26', 'ISA_9']].min(axis=1)) & (
+            self.df.loc[
+                (self.df['calc_bool'] == False) & (self.df['ITS_9'] < self.df[['ISB_26', 'ISA_9']].min(axis=1)) & (
                         self.df['ichi_signal'] == True), f'{strat}'] = 'SELL'
             signal = self.df.dropna(subset=[f'{strat}'])
             signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
@@ -114,10 +118,15 @@ class BackTester:
             signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
-        elif strat == 'whatever':
-            # do stuff
-            # return signal
-            pass
+        elif strat == 'macd':
+            self.df['macdh_calc'] = (self.df['MACDh_12_26_9']) >= 0
+            self.df['macd_signal'] = self.df['macdh_calc'].shift(1) != self.df['macdh_calc']
+            self.df.loc[(self.df['macdh_calc'] == False) & (self.df['macd_signal'] == True), f'{strat}'] = 'SELL'
+            self.df.loc[(self.df['macdh_calc'] == True) & (self.df['macd_signal'] == True), f'{strat}'] = 'BUY'
+
+            signal = self.df.dropna(subset=[f'{strat}'])
+            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            return signal
 
 
 if __name__ == '__main__':
@@ -126,4 +135,4 @@ if __name__ == '__main__':
                           interval=15,
                           start_date='2022-01-01',
                           end_date=None,
-                          signals=['ichimoku', 'rsi'])
+                          signals=['ichimoku', 'rsi', 'macd'])
