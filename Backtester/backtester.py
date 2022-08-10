@@ -11,7 +11,8 @@ StrategyOne = ta.Strategy(
     ta=[
         {"kind": "ichimoku", "include_chikou": False},
         {"kind": "rsi"},
-        {"kind": "macd"}]
+        {"kind": "macd"},
+        {"kind": "bop"}]
 )
 
 
@@ -138,11 +139,24 @@ class BackTester:
             signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
+        elif strat == 'bop':
+            self.df['BOP_calc'] = 0
+            self.df['BOP_14'] = 0
+            self.df['BOP_14'] = self.df['BOP'].rolling(14).mean()
+            self.df.loc[(self.df['BOP_14'] < 0), 'BOP_calc'] = -1
+            self.df.loc[(self.df['BOP_14'] > 0), 'BOP_calc'] = 1
+            self.df.loc[(self.df['BOP_calc'] == 1) & (self.df['BOP_calc'].shift(1) == -1), f'{strat}'] = 'BUY'
+            self.df.loc[(self.df['BOP_calc'] == -1) & (self.df['BOP_calc'].shift(1) == 1), f'{strat}'] = 'SELL'
+            signal = self.df.dropna(subset=['BOP_14'])
+            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            return signal
+
 
 if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
-                          interval=15,
-                          start_date='2022-01-01',
+                          interval=30,
+                          start_date='2021-09-01',
                           end_date=None,
-                          signals=['rsi', 'ichimoku'])
+                          signals=['ichimoku', 'rsi', 'macd', 'bop'])
+                          
