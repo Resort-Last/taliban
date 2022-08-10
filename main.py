@@ -5,6 +5,7 @@ import time
 from apply_strat import strategy
 from binance.client import Client
 from datetime import datetime
+from Notification import send_discord_message
 # 31.17 value of my usdt + btc
 
 SYMBOL = config.SYMBOL
@@ -67,6 +68,7 @@ def binance_con(price, pos_entry, pos_exit):
                         side=reverser(pos_entry)
                     )
                     print(f'Created order: {pos_entry} @ {price}')
+                    send_discord_message(f'Created new Order price: {pos_entry} @ {price}')
             elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
                 print('want to close position')
                 if not pd.isna(pos_exit):
@@ -94,6 +96,8 @@ def main():
             df = db_obj.query_main()
             df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
             _entry, _exit = strategy(df)
+            with open("heartbeat_log.txt", 'w+') as txtfile:
+                txtfile.write(df.iloc[-1]['Time'])
             if not pd.isna(_entry) or not pd.isna(_exit):
                 print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
                 binance_con(df.iloc[-1].Close, _entry, _exit)
