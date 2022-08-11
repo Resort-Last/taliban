@@ -76,7 +76,7 @@ class BackTester:
             _entry, _exit = signal[0], signal[1]
             last_time = pd.to_datetime('1990-09-09 09:00:00')
 
-            trades = pd.DataFrame(columns={'Type', 'Open', 'Close', 'Time', 'Timedelta'}) #entry, exit, timedelta
+            trades = pd.DataFrame(columns={'Type', 'Open', 'Close', 'Time', 'Timedelta', 'TS'}) #entry, exit, timedelta
             for ind, i in enumerate(self.processed_df.values):
                 if pd.to_datetime(self.processed_df.iloc[ind]['Time']) < last_time:
                     continue
@@ -165,7 +165,7 @@ class BackTester:
 if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
-                          interval=150,
+                          interval=15,
                           start_date=None,
                           end_date=None,
                           signals=['ichimoku', 'rsi', 'macd', 'bop'])

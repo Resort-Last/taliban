@@ -1,28 +1,47 @@
 import pandas
-import pandas as pd
 import os
 import pickle
-
+from datetime import datetime
 
 def read_results(indicators_interval, start_date_time):
     with open(f'{indicators_interval}', 'rb') as f:
         result = pickle.load(f)
-    sorting_dict = {}
+    sorting_dict = {
+        "Indicators" : [],
+        "Outcome" : [],
+        "Trades" : [],
+        "Longs" : [],
+        "Longs_profit" : [],
+        "Shorts" : [],
+        "Shorts_profit" : [],
+        "Timedelta_median" : []
+    }
     for key in result.keys():
         result_frame = result[key]
-        try:
-            # do things with the df
-            sorting_dict[key] = [result_frame['outcome'].sum(), "other results"]
-        except:
-            pass
-    sorting_dict = dict(sorted(sorting_dict.items(), key=lambda item: item[1], reverse=True))
-    print(sorting_dict)
+        # do things with the df
+        result_frame = result_frame[(pandas.to_datetime(result_frame['Time']) >= pandas.to_datetime(start_date_time))]
+        if result_frame.query('Type == "SHORT"').empty == False and result_frame.query('Type == "LONG"').empty == False:
+            sorting_dict["Indicators"].append(key)
+            sorting_dict["Outcome"].append(result_frame['outcome'].sum())
+            sorting_dict["Trades"].append(len(result_frame))
+            sorting_dict["Timedelta_median"].append(result_frame.sort_values("Timedelta")["Timedelta"].median())
+            sorting_dict["Longs_profit"].append(result_frame.query('Type == "LONG"')['outcome'].sum())
+            sorting_dict["Longs"].append(result_frame["Type"].value_counts()["LONG"])
+            sorting_dict["Shorts"].append(result_frame["Type"].value_counts()["SHORT"])
+            sorting_dict["Shorts_profit"].append(result_frame.query('Type == "SHORT"')['outcome'].sum())
+
+
+
+            #reporting_df = pandas.DataFrame.from_dict(sorting_dict)
+    reporting_df = pandas.DataFrame.from_dict(sorting_dict)
+    reporting_df = reporting_df.sort_values("Outcome")
+    print(reporting_df)
 
 
 for pkl in os.listdir():
     if pkl != 'reporting.py':
         print(pkl)
-        read_results(pkl, "2021-08-12 00:30:00")
+        read_results(pkl, "2022-07-01 00:30:00")
 
 
 

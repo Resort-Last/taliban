@@ -5,7 +5,9 @@ import pandas_ta as ta
 from DBHandler import DBHandler
 import sqlite3
 from Notification import send_discord_message
-
+"""
+symbol variable + symbol_rawdata
+"""
 api_key = environ.get("binance_key")
 api_secret = environ.get('binance_secret')
 client = Client(api_key, api_secret)
@@ -57,7 +59,6 @@ def append_database(symbol, database):
     df.Low = df.Low.astype(float)
     df.Volume = df.Volume.astype(float)
     database.append_db(df[1:])
-    # send_discord_message(f'update the database with data from {lastentry} to now')
 
 
 def transform_database(database, interval):
