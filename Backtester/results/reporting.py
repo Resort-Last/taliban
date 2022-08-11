@@ -35,7 +35,10 @@ def read_results(indicators_interval, start_date_time):
             #reporting_df = pandas.DataFrame.from_dict(sorting_dict)
     reporting_df = pandas.DataFrame.from_dict(sorting_dict)
     reporting_df = reporting_df.sort_values("Outcome")
-    print(reporting_df)
+    # print(reporting_df)
+    reporting_df.to_csv('test.csv')
+    with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(reporting_df.tail(3))
 
 
 for pkl in os.listdir():

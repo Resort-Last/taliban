@@ -131,8 +131,8 @@ class BackTester:
 
         elif strat == 'rsi':
             self.df['RSI_calc'] = 0
-            self.df.loc[(self.df['RSI_14'] < 20), 'RSI_calc'] = -1
-            self.df.loc[(self.df['RSI_14'] > 80), 'RSI_calc'] = 1
+            self.df.loc[(self.df['RSI_14'] < 30), 'RSI_calc'] = -1
+            self.df.loc[(self.df['RSI_14'] > 70), 'RSI_calc'] = 1
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == -1), f'{strat}'] = 'BUY'
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == 1), f'{strat}'] = 'SELL'
             signal = self.df.dropna(subset=[f'{strat}'])
@@ -165,7 +165,7 @@ class BackTester:
 if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
-                          interval=15,
+                          interval=30,
                           start_date=None,
                           end_date=None,
                           signals=['ichimoku', 'rsi', 'macd', 'bop'])
