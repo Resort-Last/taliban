@@ -3,6 +3,8 @@ from DBHandler import DBHandler
 import pandas as pd
 import pandas_ta as ta
 from functools import reduce
+from datetime import datetime
+import pickle
 
 db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
 StrategyOne = ta.Strategy(
@@ -50,7 +52,7 @@ class BackTester:
         for signal in self.signals:
             self.signal_list.append(self.ta_lib_calculations(signal))
         self.processed_df = self.apply_strategy()
-        self.calculate_profit()
+        self.calculate_profit(signals, interval)
 
     def apply_strategy(self):
         signal = reduce(lambda left, right: pd.merge(left, right, how='outer'), self.signal_list)
@@ -61,37 +63,55 @@ class BackTester:
             signal = signal[(signal['Time'] <= self.end_date)]
         return signal
 
-    def calculate_profit(self):
+    def calculate_profit(self, signals, interval):
         """ TODO: Calculate profits. can be multiple indicators max2 (boolean TRUE), every indicator can be entry/exit.
             TODO: should have lookback(variable) -- TO BE REVISED.
             TODO: calculate number of trades
             TODO: pickle it down?"""
         col_list = []
+        trades_dict = {}
         for col in self.processed_df.columns:
             col_list.append(col)
         for signal in ultra_looper(self.signals):
             _entry, _exit = signal[0], signal[1]
             last_time = pd.to_datetime('1990-09-09 09:00:00')
 
-            trades = pd.DataFrame(columns={'Type', 'Open', 'Close'})
+            trades = pd.DataFrame(columns={'Type', 'Open', 'Close', 'Time', 'Timedelta'}) #entry, exit, timedelta
             for ind, i in enumerate(self.processed_df.values):
                 if pd.to_datetime(self.processed_df.iloc[ind]['Time']) < last_time:
                     continue
-                if i[col_list.index(_entry[0])] == 'BUY' and i[col_list.index(_entry[1])] == 'BUY':
+                if i[col_list.index(_entry[0])] == 'BUY' and i[col_list.index(_entry[1])] == 'BUY':  #timedelta = time[j] - time[i]
                     for j in self.processed_df.values[ind:]:
                         if j[col_list.index(_exit[0])] == 'SELL' and j[col_list.index(_exit[1])] == 'SELL':
-                            trades = trades.append({'Type': 'LONG', 'Open': i[4], 'Close': j[4]}, ignore_index=True)
+                            trades = trades.append({'Type': 'LONG', 'Open': i[4], 'Close': j[4], 'Time': i[0], 'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S") - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S"))}, ignore_index=True)
                             last_time = pd.to_datetime(j[0])
                             break
                 if i[col_list.index(_entry[0])] == 'SELL' and i[col_list.index(_entry[1])] == 'SELL':
                     for j in self.processed_df.values[ind:]:
                         if j[col_list.index(_exit[0])] == 'BUY' and j[col_list.index(_exit[1])] == 'BUY':
-                            trades = trades.append({'Type': 'SHORT', 'Open': i[4], 'Close': j[4]}, ignore_index=True)
+                            trades = trades.append({'Type': 'SHORT', 'Open': i[4], 'Close': j[4], 'Time': i[0], 'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S") - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S"))}, ignore_index=True)
                             last_time = pd.to_datetime(j[0])
                             break
             trades.loc[(trades['Type'] == 'LONG'), 'outcome'] = trades['Close'] - trades['Open']
             trades.loc[(trades['Type'] == 'SHORT'), 'outcome'] = trades['Open'] - trades['Close']
+
+
             print(f"profit with entry: {_entry} exit: {_exit}\t{trades['outcome'].sum()}")
+            print(f"Stats: with entry: {_entry} exit: {_exit}\n")
+            print(f"""All No.:{len(trades)}\tprofit:{trades['outcome'].sum()}\n""")
+            print(f"""LONG No.: {len(trades.query('Type == "LONG"'))}\t
+                     profit:{trades.query('Type == "LONG"')['outcome'].sum()}\t
+                     max:{trades.query('Type == "LONG"')['outcome'].max()} \t
+                     min:{trades.query('Type == "LONG"')['outcome'].min()}\n""")
+            print(f"""SHORT No.: {len(trades.query('Type == "SHORT"'))}\t
+                     profit:{trades.query('Type == "SHORT"')['outcome'].sum()}\t
+                     max:{trades.query('Type == "SHORT"')['outcome'].max()}\t
+                     min:{trades.query('Type == "SHORT"')['outcome'].min()}\n""")
+            print('-' * 30)
+            trades_dict[f'{signal[0][0]},{signal[0][1]}_{signal[1][0]},{signal[1][1]}'] = trades
+
+        with open(f'results\\{signals[0]}_{signals[1]}_{signals[2]}_{signals[3]}_{interval}.pkl', 'wb') as f:
+            pickle.dump(trades_dict, f)
 
     # Ta.lib goes here
     def ta_lib_calculations(self, strat):
@@ -145,7 +165,7 @@ class BackTester:
 if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
-                          interval=30,
-                          start_date='2021-09-01',
+                          interval=150,
+                          start_date=None,
                           end_date=None,
                           signals=['ichimoku', 'rsi', 'macd', 'bop'])
