@@ -68,7 +68,7 @@ def binance_con(price, pos_entry, pos_exit):
                         side=reverser(pos_entry)
                     )
                     print(f'Created order: {pos_entry} @ {price}')
-                    send_discord_message(f'Created new Order price: {pos_entry} @ {price}')
+                    send_discord_message(f'Created new for {config.logged_user} Order price: {pos_entry} @ {price}')
             elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
                 print('want to close position')
                 if not pd.isna(pos_exit):
