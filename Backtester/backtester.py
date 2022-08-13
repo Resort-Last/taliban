@@ -14,7 +14,7 @@ StrategyOne = ta.Strategy(
         {"kind": "ichimoku", "include_chikou": False},
         {"kind": "rsi"},
         {"kind": "macd"},
-        {"kind": "bop"}]
+        {"kind": "ema", "length": 100}]
 )
 
 
@@ -109,8 +109,11 @@ class BackTester:
                      min:{trades.query('Type == "SHORT"')['outcome'].min()}\n""")
             print('-' * 30)
             trades_dict[f'{signal[0][0]},{signal[0][1]}_{signal[1][0]},{signal[1][1]}'] = trades
-
-        with open(f'results\\{signals[0]}_{signals[1]}_{signals[2]}_{signals[3]}_{interval}.pkl', 'wb') as f:
+        filename = ''
+        for item in signals:
+            filename += f'{item}_'
+        filename += f'{interval}.pkl'
+        with open(f'results\\{filename}', 'wb') as f:
             pickle.dump(trades_dict, f)
 
     # Ta.lib goes here
@@ -161,11 +164,21 @@ class BackTester:
             signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
+        elif strat == 'ema':
+            self.df.loc[(self.df['EMA_100'] >= self.df['Close']), 'ema'] = 'BUY'
+            self.df.loc[(self.df['EMA_100'] <= self.df['Close']), 'ema'] = 'SELL'
+            signal = self.df.dropna(subset=[f'{strat}'])
+            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            return signal
+        else:
+            print(f'no {strat}.')
+            pass
+
 
 if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
-                          interval=30,
-                          start_date=None,
+                          interval=15,
+                          start_date=' 2022_01_01 00:00:00',
                           end_date=None,
-                          signals=['ichimoku', 'rsi', 'macd', 'bop'])
+                          signals=['ichimoku', 'rsi', 'macd'])

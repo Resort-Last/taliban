@@ -51,14 +51,14 @@ def binance_con(price, pos_entry, pos_exit):
                     else:
                         tp_price, sl_price = price
                         print('HUGE ISSUES HERE. THIS SHOULD NEVER HAPPEN')
-                    client.futures_create_order(
-                        symbol=SYMBOL,
-                        type='TAKE_PROFIT',
-                        price=tp_price,
-                        quantity=quantity,
-                        stopPrice=tp_price,
-                        side=reverser(pos_entry)
-                    )
+                    # client.futures_create_order(
+                    #     symbol=SYMBOL,
+                    #     type='TAKE_PROFIT',
+                    #     price=tp_price,
+                    #     quantity=quantity,
+                    #     stopPrice=tp_price,
+                    #     side=reverser(pos_entry)
+                    # )
                     client.futures_create_order(
                         symbol=SYMBOL,
                         type='STOP',
