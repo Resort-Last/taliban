@@ -1,5 +1,6 @@
 import os
 from discord.ext import commands
+from datetime import datetime, timedelta
 
 
 Token = os.getenv('DISCORD_TOKEN')
@@ -13,7 +14,9 @@ bot = commands.Bot(command_prefix='!')
 async def heartbeat(ctx):
     with open('heartbeat_log.txt') as f:
         lines = f.readlines()
-    await ctx.send(lines)
+        utc_time = datetime.strptime(lines[0][0:20], "%Y-%m-%d %H:%M:%S")
+        cet_time = utc_time + timedelta(hours=2)
+    await ctx.send(cet_time)
 
 
 @bot.command(name='slave') #2 command, kulon kulon a serverekre
