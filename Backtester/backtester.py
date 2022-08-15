@@ -40,12 +40,14 @@ def ultra_looper(signals):
 
 class BackTester:
 
-    def __init__(self, strategy, db, interval, start_date, end_date, signals):
+    def __init__(self, strategy, db, interval, start_date, end_date, signals, tp, sl):
         self.strategy = strategy
         self.start_date = start_date
         self.end_date = end_date
         self.dataframe = transform_database(db, interval)
         self.dataframe.ta.strategy(self.strategy)
+        self.tp = tp
+        self.sl = sl
         self.df = self.dataframe.dropna(0)
         self.signals = signals
         self.signal_list = []
@@ -64,10 +66,7 @@ class BackTester:
         return signal
 
     def calculate_profit(self, signals, interval):
-        """ TODO: Calculate profits. can be multiple indicators max2 (boolean TRUE), every indicator can be entry/exit.
-            TODO: should have lookback(variable) -- TO BE REVISED.
-            TODO: calculate number of trades
-            TODO: pickle it down?"""
+        """ TODO: should have lookback(variable) -- TO BE REVISED."""
         col_list = []
         trades_dict = {}
         for col in self.processed_df.columns:
@@ -76,25 +75,80 @@ class BackTester:
             _entry, _exit = signal[0], signal[1]
             last_time = pd.to_datetime('1990-09-09 09:00:00')
 
-            trades = pd.DataFrame(columns={'Type', 'Open', 'Close', 'Time', 'Timedelta', 'TS'}) #entry, exit, timedelta
+            trades = pd.DataFrame(columns={'Type', 'Open', 'Close', 'Time', 'Timedelta', 'TS', 'TP_SL'})
             for ind, i in enumerate(self.processed_df.values):
                 if pd.to_datetime(self.processed_df.iloc[ind]['Time']) < last_time:
                     continue
-                if i[col_list.index(_entry[0])] == 'BUY' and i[col_list.index(_entry[1])] == 'BUY':  #timedelta = time[j] - time[i]
+                if i[col_list.index(_entry[0])] == 'BUY' and i[col_list.index(_entry[1])] == 'BUY':
+                    take_profit = i[4] + (i[4] * self.tp)  # Close + Close * TP
+                    stop_loss = i[4] - (i[4] * self.sl)  # Close - Close * TP
                     for j in self.processed_df.values[ind:]:
                         if j[col_list.index(_exit[0])] == 'SELL' and j[col_list.index(_exit[1])] == 'SELL':
-                            trades = trades.append({'Type': 'LONG', 'Open': i[4], 'Close': j[4], 'Time': i[0], 'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S") - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S"))}, ignore_index=True)
+                            trades = trades.append({'Type': 'LONG',
+                                                    'Open': i[4],
+                                                    'Close': j[4],
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': False}, ignore_index=True)
+                            last_time = pd.to_datetime(j[0])
+                            break
+                        elif j[3] <= stop_loss:  # High > tp, Low < SL
+                            trades = trades.append({'Type': 'LONG',
+                                                    'Open': i[4],
+                                                    'Close': stop_loss,
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': 'SL'}, ignore_index=True)
+                            last_time = pd.to_datetime(j[0])
+                            break
+                        elif j[2] >= take_profit:  # High > tp, Low < SL
+                            trades = trades.append({'Type': 'LONG',
+                                                    'Open': i[4],
+                                                    'Close': take_profit,
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': 'TP'}, ignore_index=True)
                             last_time = pd.to_datetime(j[0])
                             break
                 if i[col_list.index(_entry[0])] == 'SELL' and i[col_list.index(_entry[1])] == 'SELL':
+                    take_profit = i[4] - (i[4] * self.tp)  # Close - Close * TP
+                    stop_loss = i[4] + (i[4] * self.sl)  # Close + Close * SL
                     for j in self.processed_df.values[ind:]:
                         if j[col_list.index(_exit[0])] == 'BUY' and j[col_list.index(_exit[1])] == 'BUY':
-                            trades = trades.append({'Type': 'SHORT', 'Open': i[4], 'Close': j[4], 'Time': i[0], 'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S") - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S"))}, ignore_index=True)
+                            trades = trades.append({'Type': 'SHORT',
+                                                    'Open': i[4],
+                                                    'Close': j[4],
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': False}, ignore_index=True)
+                            last_time = pd.to_datetime(j[0])
+                            break
+                        elif j[2] >= stop_loss:  # LOW < tp, High > SL
+                            trades = trades.append({'Type': 'SHORT',
+                                                    'Open': i[4],
+                                                    'Close': stop_loss,
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': 'SL'}, ignore_index=True)
+                            last_time = pd.to_datetime(j[0])
+                            break
+                        elif j[3] <= take_profit:  # LOW < tp, High > SL
+                            trades = trades.append({'Type': 'SHORT',
+                                                    'Open': i[4],
+                                                    'Close': take_profit,
+                                                    'Time': i[0],
+                                                    'Timedelta': (datetime.strptime(j[0], "%Y-%m-%d %H:%M:%S")
+                                                                  - datetime.strptime(i[0], "%Y-%m-%d %H:%M:%S")),
+                                                    'TP_SL': 'TP'}, ignore_index=True)
                             last_time = pd.to_datetime(j[0])
                             break
             trades.loc[(trades['Type'] == 'LONG'), 'outcome'] = trades['Close'] - trades['Open']
             trades.loc[(trades['Type'] == 'SHORT'), 'outcome'] = trades['Open'] - trades['Close']
-
 
             print(f"profit with entry: {_entry} exit: {_exit}\t{trades['outcome'].sum()}")
             print(f"Stats: with entry: {_entry} exit: {_exit}\n")
@@ -107,6 +161,7 @@ class BackTester:
                      profit:{trades.query('Type == "SHORT"')['outcome'].sum()}\t
                      max:{trades.query('Type == "SHORT"')['outcome'].max()}\t
                      min:{trades.query('Type == "SHORT"')['outcome'].min()}\n""")
+            print(f"""TP_SL No.: {len(trades.query('TP_SL == True'))}\t""")
             print('-' * 30)
             trades_dict[f'{signal[0][0]},{signal[0][1]}_{signal[1][0]},{signal[1][1]}'] = trades
         filename = ''
@@ -128,8 +183,8 @@ class BackTester:
             self.df.loc[
                 (self.df['calc_bool'] == False) & (self.df['ITS_9'] < self.df[['ISB_26', 'ISA_9']].min(axis=1)) & (
                         self.df['ichi_signal'] == True), f'{strat}'] = 'SELL'
-            signal = self.df.dropna(subset=[f'{strat}'])
-            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            #signal = self.df.dropna(subset=[f'{strat}'])
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
         elif strat == 'rsi':
@@ -138,8 +193,8 @@ class BackTester:
             self.df.loc[(self.df['RSI_14'] > 70), 'RSI_calc'] = 1
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == -1), f'{strat}'] = 'BUY'
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == 1), f'{strat}'] = 'SELL'
-            signal = self.df.dropna(subset=[f'{strat}'])
-            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            # signal = self.df.dropna(subset=[f'{strat}'])
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
         elif strat == 'macd':
@@ -179,6 +234,8 @@ if __name__ == '__main__':
     dingdong = BackTester(strategy=StrategyOne,
                           db=db_obj,
                           interval=15,
-                          start_date=' 2022_01_01 00:00:00',
+                          start_date=None,
                           end_date=None,
-                          signals=['ichimoku', 'rsi', 'macd'])
+                          signals=['ichimoku', 'rsi'],
+                          sl=.02,
+                          tp=.1)
