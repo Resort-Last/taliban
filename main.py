@@ -68,8 +68,8 @@ def binance_con(price, pos_entry, pos_exit):
                         side=reverser(pos_entry)
                     )
                     print(f'Created order: {pos_entry} @ {price}')
-                    send_discord_message(f'Created new for {config.logged_user} Order price: {pos_entry} @ {price}')
-            elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
+                    send_discord_message(f'Created new order for {config.logged_user} price: {pos_entry} @ {price}')
+            elif float(item['positionAmt']) != 0.00 and len(open_orders) > 0:
                 print('want to close position')
                 if not pd.isna(pos_exit):
                     print(pos_exit, client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
@@ -83,6 +83,7 @@ def binance_con(price, pos_entry, pos_exit):
                             quantity=quantity,  # Number of coins you wish to buy / sell, float
                         )
                         print('close this position')
+                        send_discord_message(f'Trying to close position for {config.logged_user} price: {pos_exit} @ {price}')
             elif float(item['positionAmt']) == 0.00 and len(open_orders) > 0:  # ha csak TP SL marad.
                 print('trying to close the TP SL')
                 client.futures_cancel_all_open_orders(symbol=SYMBOL)
