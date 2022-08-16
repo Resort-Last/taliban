@@ -14,7 +14,8 @@ StrategyOne = ta.Strategy(
         {"kind": "ichimoku", "include_chikou": False},
         {"kind": "bop"},
         {"kind": "macd"},
-        {"kind": "ema", "length": 100}]
+        {"kind": "ema", "length": 100},
+        {"kind": "bbands", "std": 2.5}]
 )
 
 
@@ -220,6 +221,13 @@ class BackTester:
             self.df.loc[(self.df['EMA_100'] >= self.df['Close']), 'ema'] = 'SELL'
             signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
+
+        elif strat == 'bbands':
+            self.df.loc[(self.df['BBU_5_2.5'] < self.df['High']), 'bbands'] = 'SELL'
+            self.df.loc[(self.df['BBL_5_2.5'] > self.df['Low']), 'bbands'] = 'BUY'
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            return signal
+
         else:
             print(f'no {strat}.')
             pass
@@ -231,6 +239,6 @@ if __name__ == '__main__':
                           interval=15,
                           start_date=None,
                           end_date=None,
-                          signals=['ichimoku', 'bop'],
+                          signals=['bbands', 'ichimoku'],
                           sl=.05,
                           tp=.01)

@@ -44,7 +44,7 @@ def read_results(indicators_interval, start_date_time):
 for pkl in os.listdir():
     if pkl[-4:] == '.pkl':
         print(pkl)
-        read_results(pkl, "2022-07-01 00:30:00")
+        read_results(pkl, "2022-01-01 00:30:00")
 
 
 
