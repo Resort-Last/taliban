@@ -12,7 +12,7 @@ StrategyOne = ta.Strategy(
     description="Ichimoku, RSI, MACD",
     ta=[
         {"kind": "ichimoku", "include_chikou": False},
-        {"kind": "rsi"},
+        {"kind": "bop"},
         {"kind": "macd"},
         {"kind": "ema", "length": 100}]
 )
@@ -161,7 +161,7 @@ class BackTester:
                      profit:{trades.query('Type == "SHORT"')['outcome'].sum()}\t
                      max:{trades.query('Type == "SHORT"')['outcome'].max()}\t
                      min:{trades.query('Type == "SHORT"')['outcome'].min()}\n""")
-            print(f"""TP_SL No.: {len(trades.query('TP_SL == True'))}\t""")
+            print(f"""TP_SL No.: {len(trades.query('TP_SL != False'))}\t""")
             print('-' * 30)
             trades_dict[f'{signal[0][0]},{signal[0][1]}_{signal[1][0]},{signal[1][1]}'] = trades
         filename = ''
@@ -183,7 +183,6 @@ class BackTester:
             self.df.loc[
                 (self.df['calc_bool'] == False) & (self.df['ITS_9'] < self.df[['ISB_26', 'ISA_9']].min(axis=1)) & (
                         self.df['ichi_signal'] == True), f'{strat}'] = 'SELL'
-            #signal = self.df.dropna(subset=[f'{strat}'])
             signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
@@ -193,18 +192,16 @@ class BackTester:
             self.df.loc[(self.df['RSI_14'] > 70), 'RSI_calc'] = 1
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == -1), f'{strat}'] = 'BUY'
             self.df.loc[(self.df['RSI_calc'] == 0) & (self.df['RSI_calc'].shift(1) == 1), f'{strat}'] = 'SELL'
-            # signal = self.df.dropna(subset=[f'{strat}'])
             signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
         elif strat == 'macd':
             self.df['macdh_calc'] = (self.df['MACDh_12_26_9']) >= 0
             self.df['macd_signal'] = self.df['macdh_calc'].shift(1) != self.df['macdh_calc']
-            self.df.loc[(self.df['macdh_calc'] == False) & (self.df['macd_signal'] == True), f'{strat}'] = 'SELL'
-            self.df.loc[(self.df['macdh_calc'] == True) & (self.df['macd_signal'] == True), f'{strat}'] = 'BUY'
+            self.df.loc[(self.df['macdh_calc'] == False) & (self.df['macd_signal'] == True) & (self.df['MACD_12_26_9'] < 0), f'{strat}'] = 'SELL'
+            self.df.loc[(self.df['macdh_calc'] == True) & (self.df['macd_signal'] == True) & (self.df['MACD_12_26_9'] > 0), f'{strat}'] = 'BUY'
 
-            signal = self.df.dropna(subset=[f'{strat}'])
-            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
         elif strat == 'bop':
@@ -215,15 +212,13 @@ class BackTester:
             self.df.loc[(self.df['BOP_14'] > 0), 'BOP_calc'] = 1
             self.df.loc[(self.df['BOP_calc'] == 1) & (self.df['BOP_calc'].shift(1) == -1), f'{strat}'] = 'BUY'
             self.df.loc[(self.df['BOP_calc'] == -1) & (self.df['BOP_calc'].shift(1) == 1), f'{strat}'] = 'SELL'
-            signal = self.df.dropna(subset=['BOP_14'])
-            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
 
         elif strat == 'ema':
-            self.df.loc[(self.df['EMA_100'] >= self.df['Close']), 'ema'] = 'BUY'
-            self.df.loc[(self.df['EMA_100'] <= self.df['Close']), 'ema'] = 'SELL'
-            signal = self.df.dropna(subset=[f'{strat}'])
-            signal = signal[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
+            self.df.loc[(self.df['EMA_100'] <= self.df['Close']), 'ema'] = 'BUY'
+            self.df.loc[(self.df['EMA_100'] >= self.df['Close']), 'ema'] = 'SELL'
+            signal = self.df[['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol', f'{strat}']]
             return signal
         else:
             print(f'no {strat}.')
@@ -236,6 +231,6 @@ if __name__ == '__main__':
                           interval=15,
                           start_date=None,
                           end_date=None,
-                          signals=['ichimoku', 'rsi'],
-                          sl=.02,
-                          tp=.1)
+                          signals=['ichimoku', 'bop'],
+                          sl=.05,
+                          tp=.01)

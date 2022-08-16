@@ -8,7 +8,8 @@ from binance import ThreadedWebsocketManager
 SYMBOL = 'BTCUSDT'
 INTERVAL = '15m'
 historical_kline_start = '5 day ago UTC'  # CHANGE THIS IF YOU CHANGE THE INTERVAL TO GET MORE / LESS HISTORICAL CANDLES
-profit_mod = 0.02   # MODIFIER FOR THE STOP LOSS AND TAKE PROFIT PRICE
+tp_mod = 0.01   # MODIFIER FOR THE STOP LOSS AND TAKE PROFIT PRICE
+sl_mod = 0.05
 leverage = 5    # FUTURES LEVERAGE 1x - 125x I THINK
 quantity = 0.02    # AMOUNT OF COINS YOU WANT TO BUY
 logged_user = "Lastresort"
