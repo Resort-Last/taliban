@@ -6,14 +6,17 @@ from DBHandler import DBHandler
 import sqlite3
 from Notification import send_discord_message
 """
-symbol variable + symbol_rawdata
+USAGE: Set the symbol to the coin you would like, and create a {symbol}rawdata file. Run the raw_data function (once).
+Once you have the rawdata you can run the transform_database function using parameters of your liking from 
+backtester.py
 """
 api_key = environ.get("binance_key")
 api_secret = environ.get('binance_secret')
+symbol = "BTCUSDT"
 client = Client(api_key, api_secret)
-db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
-con = sqlite3.connect('rawdata.db')
-historical_data = pd.read_sql_query('Select * from rawdata;', con)
+db_obj = DBHandler(db=f'{symbol}rawdata.db', table=f'rawdata')
+con = sqlite3.connect(f'{symbol}rawdata.db')
+historical_data = pd.read_sql_query(f'Select * from rawdata;', con)
 
 
 def raw_data(symbol, database):
@@ -36,8 +39,8 @@ def raw_data(symbol, database):
     database.trunc_db(sure=True)
     database.append_db(df)
 
-#raw_data("BTCUSDT", db_obj)
-#takes a long time, dont run often
+# raw_data(symbol, db_obj)
+# takes a long time, dont run often
 
 
 def append_database(symbol, database):
@@ -63,7 +66,7 @@ def append_database(symbol, database):
 
 def transform_database(database, interval):
     append_database("BTCUSDT", database)
-    historical_data = pd.read_sql_query('Select * from rawdata;', con)
+    historical_data = pd.read_sql_query(f'Select * from rawdata;', con)
     candles = {
         'Time': [],
         'Open': [],
@@ -86,10 +89,3 @@ def transform_database(database, interval):
         i += interval
     candle_dataframe = pd.DataFrame.from_dict(candles)
     return candle_dataframe
-
-
-# transformed_db = transform_database(db_obj,5)
-# rsidf = transformed_db.ta.rsi()
-# transformed_db = pd.concat([transformed_db, rsidf], axis=1)
-
-
