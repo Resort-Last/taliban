@@ -5,8 +5,8 @@ import pandas_ta as ta
 from functools import reduce
 from datetime import datetime
 import pickle
-
-db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
+from Get_database import db_obj
+#db_obj = DBHandler(db=f'rawdata.db', table=f'rawdata')
 StrategyOne = ta.Strategy(
     name="Momo and Volatility",
     description="Ichimoku, RSI, MACD",
@@ -55,7 +55,7 @@ class BackTester:
         for signal in self.signals:
             self.signal_list.append(self.ta_lib_calculations(signal))
         self.processed_df = self.apply_strategy()
-        self.calculate_profit(signals, interval)
+        self.calculate_profit(signals, interval, tp, sl)
 
     def apply_strategy(self):
         signal = reduce(lambda left, right: pd.merge(left, right, how='outer'), self.signal_list)
@@ -66,7 +66,7 @@ class BackTester:
             signal = signal[(signal['Time'] <= self.end_date)]
         return signal
 
-    def calculate_profit(self, signals, interval):
+    def calculate_profit(self, signals, interval, tp, sl):
         """ TODO: should have lookback(variable) -- TO BE REVISED."""
         col_list = []
         trades_dict = {}
@@ -168,7 +168,7 @@ class BackTester:
         filename = ''
         for item in signals:
             filename += f'{item}_'
-        filename += f'{interval}.pkl'
+        filename += f'{interval}_tp{tp}_sl{sl}.pkl'
         with open(f'results\\{filename}', 'wb') as f:
             pickle.dump(trades_dict, f)
 
@@ -239,6 +239,6 @@ if __name__ == '__main__':
                           interval=15,
                           start_date=None,
                           end_date=None,
-                          signals=['bbands', 'ichimoku'],
+                          signals=['bbands', 'ichimoku', 'bop'],
                           sl=.05,
-                          tp=.01)
+                          tp=.2)
