@@ -77,10 +77,10 @@ def binance_con(price, pos_entry, pos_exit):
                     if pos_exit == client.futures_get_open_orders(symbol=SYMBOL)[0]["side"]:
                         client.futures_create_order(
                             symbol=SYMBOL,
-                            type='LIMIT',
-                            timeInForce='GTC',  # Can be changed - see link to API doc below
+                            type='STOP',
                             price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
                             side=pos_exit,  # Direction ('BUY' / 'SELL'), string
+                            stopPrice=float(round(price, 0)),
                             quantity=quantity,  # Number of coins you wish to buy / sell, float
                         )
                         print('close this position')
