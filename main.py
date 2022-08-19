@@ -70,17 +70,17 @@ def binance_con(price, pos_entry, pos_exit):
                     )
                     print(f'Created order: {pos_entry} @ {price}')
                     send_discord_message(f'Created new order for {config.logged_user} price: {pos_entry} @ {price}')
-            elif float(item['positionAmt']) != 0.00 and len(open_orders) > 0:
+            elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
                 print('want to close position')
                 if not pd.isna(pos_exit):
                     print(pos_exit, client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
                     if pos_exit == client.futures_get_open_orders(symbol=SYMBOL)[0]["side"]:
                         client.futures_create_order(
                             symbol=SYMBOL,
-                            type='STOP',
+                            type='LIMIT',
+                            timeInForce='GTC',  # Can be changed - see link to API doc below
                             price=float(round(price, 0)),  # The price at which you wish to buy/sell, float
                             side=pos_exit,  # Direction ('BUY' / 'SELL'), string
-                            stopPrice=float(round(price, 0)),
                             quantity=quantity,  # Number of coins you wish to buy / sell, float
                         )
                         print('close this position')
