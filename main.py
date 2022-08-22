@@ -101,9 +101,13 @@ def main():
             with open("heartbeat_log.txt", 'w+') as txtfile:
                 txtfile.write(df.iloc[-1]['Time'])
             if not pd.isna(_entry) or not pd.isna(_exit):
-                print(f'Price: {df.iloc[-1].Close} entry: {_entry} exit: {_exit}')
-                binance_con(df.iloc[-1].Close, _entry, _exit)
-                # ha van entry/exit go to do client stuff.
+                if not pd.isna(_entry) and not pd.isna(_exit):
+                    if _entry != _exit:
+                        pass
+                    elif _entry == _exit:
+                        binance_con(df.iloc[-1].Close, _entry, _exit)
+                else:
+                    binance_con(df.iloc[-1].Close, _entry, _exit)
         except pd.io.sql.DatabaseError as e:
             print(f"{datetime.now()}....\n{e}\n")
         time.sleep(10)
