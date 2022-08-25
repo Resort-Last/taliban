@@ -112,6 +112,5 @@ def main():
             print(f"{datetime.now()}....\n{e}\n")
         time.sleep(10)
 
-
 if __name__ == '__main__':
     main()
