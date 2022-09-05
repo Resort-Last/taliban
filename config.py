@@ -11,7 +11,7 @@ historical_kline_start = '5 day ago UTC'  # CHANGE THIS IF YOU CHANGE THE INTERV
 tp_mod = 0.01   # MODIFIER FOR THE STOP LOSS AND TAKE PROFIT PRICE
 sl_mod = 0.05
 leverage = 5    # FUTURES LEVERAGE 1x - 125x I THINK
-quantity = 0.02    # AMOUNT OF COINS YOU WANT TO BUY
+quantity = 0.06    # AMOUNT OF COINS YOU WANT TO BUY
 logged_user = "Lastresort"
 
 """binance client related data"""
