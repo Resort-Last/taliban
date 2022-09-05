@@ -30,29 +30,23 @@ def reverser(pos_type):
     else:
         return 'BOTH'
 
+
 def pos_check():
     client = Client(environ.get("binance_key"), environ.get("binance_secret"))
     client.futures_change_leverage(symbol=SYMBOL, leverage=config.leverage)
-    open_orders = client.futures_get_open_orders(symbol=SYMBOL)
-    print(len(open_orders))
     for item in client.futures_position_information():
         if item['symbol'] == SYMBOL:
             return item['positionAmt']
 
-def binance_con(pos_entry, pos_exit):
+
+def binance_con(price, pos_entry, pos_exit):
     client = Client(environ.get("binance_key"), environ.get("binance_secret"))
     client.futures_change_leverage(symbol=SYMBOL, leverage=config.leverage)
     open_orders = client.futures_get_open_orders(symbol=SYMBOL)
-    print(len(open_orders))
     for item in client.futures_position_information():
         if item['symbol'] == SYMBOL:
-            #
             if float(item['positionAmt']) == 0.00 and len(open_orders) == 0:
                 if not pd.isna(pos_entry):
-                    if pos_entry == "SELL":
-                        price = float(client.futures_coin_order_book(symbol= "BTCUSD_PERP")['asks'][0][0])
-                    elif pos_entry == "BUY":
-                        price = float(client.futures_coin_order_book(symbol= "BTCUSD_PERP")['bids'][0][0])
                     client.futures_create_order(
                         symbol=SYMBOL,
                         type='LIMIT',
@@ -90,14 +84,8 @@ def binance_con(pos_entry, pos_exit):
                     send_discord_message(f'Created new order for {config.logged_user} price: {pos_entry} @ {price}')
                     return datetime.now()
 
-            elif float(item['positionAmt']) != 0.00 and len(open_orders) > 0:
-                print('want to close position')
+            elif float(item['positionAmt']) != 0.00 and len(open_orders) == 2:
                 if not pd.isna(pos_exit):
-                    if pos_exit == "SELL":
-                        price = float(client.futures_coin_order_book(symbol= "BTCUSD_PERP")['asks'][0][0])
-                    elif pos_exit == "BUY":
-                        price = float(client.futures_coin_order_book(symbol= "BTCUSD_PERP")['bids'][0][0])
-                    print(pos_exit, client.futures_get_open_orders(symbol=SYMBOL)[0]["side"])
                     if pos_exit == client.futures_get_open_orders(symbol=SYMBOL)[0]["side"]:
                         client.futures_create_order(
                             symbol=SYMBOL,
@@ -107,10 +95,8 @@ def binance_con(pos_entry, pos_exit):
                             side=pos_exit,  # Direction ('BUY' / 'SELL'), string
                             quantity=quantity,  # Number of coins you wish to buy / sell, float
                         )
-                        print('close this position')
                         send_discord_message(f'Trying to close position for {config.logged_user} price: {pos_exit} @ {price}')
             elif float(item['positionAmt']) == 0.00 and len(open_orders) > 0:  # ha csak TP SL marad.
-                print('trying to close the TP SL')
                 client.futures_cancel_all_open_orders(symbol=SYMBOL)
 
     """https://binance-docs.github.io/apidocs/futures/en/#new-order-trade"""
@@ -131,16 +117,17 @@ def main():
             df = db_obj.query_main()
             df.set_index(pd.DatetimeIndex(df["Time"]), inplace=True)
             _entry, _exit = strategy(df)
+            _price = df.iloc[-1].Close
             if not pd.isna(_entry) or not pd.isna(_exit):
                 if not pd.isna(_entry) and not pd.isna(_exit):
                     if _entry != _exit:
                         pass
                     elif _entry == _exit:
-                        binance_con_timeopened = binance_con(_entry, _exit)
+                        binance_con_timeopened = binance_con(_price, _entry, _exit)
                         if binance_con_timeopened:
                             data_to_dict['Timeopened'][0] = str(binance_con_timeopened)
                 else:
-                    binance_con_timeopened = binance_con(_entry, _exit)
+                    binance_con_timeopened = binance_con(_price, _entry, _exit)
                     if binance_con_timeopened:
                         data_to_dict['Timeopened'][0] = str(binance_con_timeopened)
             data_to_dict['Quantity'][0] = pos_check()
@@ -149,7 +136,10 @@ def main():
             print(f"{datetime.now()}....\n{e}\n")
         except BinanceAPIException as eee:
             if eee.code == -1021 or eee.code == -1001:
-                send_discord_message(eee)
+                data_to_dict['Error'][0] = str(eee)
+                with open(f'heartbeat', 'wb') as f:
+                    pickle.dump(data_to_dict, f)
+                send_discord_message(f'{config.logged_user} \t {eee}')
             else:
                 data_to_dict['Error'][0] = str(eee)
                 with open(f'heartbeat', 'wb') as f:

@@ -21,10 +21,12 @@ async def heartbeat(ctx):
     utc_time = datetime.strptime((result['Heartbeat'][0]), "%Y-%m-%d %H:%M:%S")
     cet_time = utc_time + timedelta(hours=2)
     if float(result['Quantity'][0]) != 0.00:
+        utc_time_heartbeat = datetime.strptime((result['Timeopened'][0]), "%Y-%m-%d %H:%M:%S.%f")
+        cet_time_heartbeat = str(utc_time_heartbeat + timedelta(hours=2))[:19]
         if float(result['Quantity'][0]) > 0:
-            message = f'You have an open long position, opened on {result["Timeopened"][0]}'
+            message = f'You have an open long position, opened on {cet_time_heartbeat}'
         elif float(result['Quantity'][0]) < 0:
-            message = f'You have an open short position, opened on {result["Timeopened"][0]}'
+            message = f'You have an open long position, opened on {cet_time_heartbeat}'
     await ctx.send(f'beep boop: {cet_time} --- {message}')
 
 
@@ -59,9 +61,8 @@ async def position_reminder():
         print(counter.seconds/60/60)
         channel = bot.get_channel(1013131816137408672)
         if openhours >= 7:
-            if int((datetime.now() + timedelta(hours=2)).strftime('%H')) < 9:
-                pass
-            await channel.send(f'<@{Discord_user}> position has been open for more than {floor(openhours)} hours')
+            if int((datetime.now() + timedelta(hours=2)).strftime('%H')) > 8:
+                await channel.send(f'<@{Discord_user}> position has been open for more than {floor(openhours)} hours')
 
 @tasks.loop(minutes=5)
 async def heartbeat_reminder():
@@ -69,10 +70,12 @@ async def heartbeat_reminder():
     with open(f'heartbeat', 'rb') as f:
         result = pickle.load(f)
     channel = bot.get_channel(1013131816137408672)
-    if (datetime.now() - datetime.strptime((result['Heartbeat'][0]), "%Y-%m-%d %H:%M:%S")).seconds > 15*60:
+    utc_heartbeat = datetime.strptime((result['Heartbeat'][0]), "%Y-%m-%d %H:%M:%S")
+    if (datetime.now() - utc_heartbeat).seconds > 15*60:
         if heartbeat_notified == 0:
             temp_heartbeat[0] = 1
-            await channel.send(f'<@{Discord_user}> bot is dead, last hearbeat at {result["Heartbeat"][0] + timedelta(hours=2)}, error:{result["Error"]}') #user id var
+            await channel.send(f'<@{Discord_user}> bot is dead, last hearbeat at'
+                               f' {utc_heartbeat + timedelta(hours=2)} \nerror:{result["Error"]}')
     else:
         temp_heartbeat[0] = 0
 
