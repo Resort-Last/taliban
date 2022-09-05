@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<form action='{{ url_for("home")}}' method="post">
+<label for="firstname">First Name:</label>
+<input type="text" id="firstname" name="fname" placeholder="firstname">
+<label for="lastname">Last Name:</label>
+<input type="text" id="lastname" name="lname" placeholder="lastname">
+<button type="submit">Login</button>
+
+    {% if names %}
+        {% for name in names %}
+    <h1>Test - {{ name }}</h1>
+        {% endfor %}
+    {% endif %}
+
+
+{% endblock content %}

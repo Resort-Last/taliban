@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block content %}
+<button onClick="aasd()">Click me</button>
+<h1>{{df.query('TP_SL == "TP"')['Type'].value_counts()}}</h1>
+<table class="table table-dark">
+    <tr>
+        {% for col in df.columns if col != 'TS' %}
+        <th><button type="submit" value= {{col}}>{{col}}</button></th>
+        {% endfor %}
+    </tr>
+
+
+</table>
+{% endblock content %}
+
