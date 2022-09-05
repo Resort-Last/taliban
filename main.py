@@ -155,6 +155,5 @@ def main():
             pickle.dump(data_to_dict, f)
         time.sleep(10)
 
-
 if __name__ == '__main__':
     main()

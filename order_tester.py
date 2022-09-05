@@ -33,5 +33,5 @@ def create_order():
         quantity=0.001,  # Number of coins you wish to buy / sell, float
     )
 
-
-open_pos()
+print('asd')
+#open_pos()
